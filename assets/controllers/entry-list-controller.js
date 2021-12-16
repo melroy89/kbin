@@ -1,11 +1,16 @@
-import {ApplicationController} from 'stimulus-use'
+import {Controller} from '@hotwired/stimulus';
+import {useDispatch} from "stimulus-use";
 import {fetch, ok} from "../utils/http";
 import router from "../utils/routing";
 
-export default class extends ApplicationController {
+export default class extends Controller {
     static values = {
         magazineName: String
     };
+
+    connect() {
+        useDispatch(this)
+    }
 
     async add(notification) {
         const magazineName = notification.detail.magazine.name;

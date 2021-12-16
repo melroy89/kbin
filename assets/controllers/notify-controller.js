@@ -1,8 +1,9 @@
 import bootstrap from "bootstrap/dist/js/bootstrap.min";
-import {ApplicationController} from 'stimulus-use'
+import {Controller} from '@hotwired/stimulus';
+import {useDispatch} from 'stimulus-use'
 import Subscribe from '../event-source';
 
-export default class extends ApplicationController {
+export default class extends Controller {
     static values = {
         magazineName: String,
         username: String,
@@ -10,6 +11,8 @@ export default class extends ApplicationController {
     };
 
     connect() {
+        useDispatch(this)
+
         this.es(
             this.getTopics()
         );

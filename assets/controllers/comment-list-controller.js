@@ -1,12 +1,17 @@
-import {ApplicationController} from 'stimulus-use'
+import {Controller} from '@hotwired/stimulus';
+import {useDispatch} from "stimulus-use";
 import CommentFactory from "../utils/comment-factory";
 import router from "../utils/routing";
 import {fetch, ok} from "../utils/http";
 
-export default class extends ApplicationController {
+export default class extends Controller {
     static values = {
         subjectId: Number,
     };
+
+    connect() {
+        useDispatch(this)
+    }
 
     async add(notification) {
         const subjectId = notification.detail.subject.id;
