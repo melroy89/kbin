@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\Contracts\FavouriteInterface;
 use App\Entity\Contracts\ReportInterface;
 use App\Entity\Contracts\VisibilityInterface;
 use App\Entity\Contracts\VoteInterface;
@@ -12,14 +13,16 @@ use App\Repository\EntryCommentRepository;
 use DateTime;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
+use Doctrine\Common\Collections\Criteria;
 use Doctrine\ORM\Mapping as ORM;
+use Doctrine\ORM\Mapping\OrderBy;
 use Traversable;
 use Webmozart\Assert\Assert;
 
 /**
  * @ORM\Entity(repositoryClass=EntryCommentRepository::class)
  */
-class EntryComment implements VoteInterface, VisibilityInterface, ReportInterface
+class EntryComment implements VoteInterface, VisibilityInterface, ReportInterface, FavouriteInterface
 {
     use VotableTrait;
     use VisibilityTrait;
@@ -61,11 +64,24 @@ class EntryComment implements VoteInterface, VisibilityInterface, ReportInterfac
      */
     public ?string $body;
     /**
+     * @ORM\Column(type="integer", options={"default": 0})
+     */
+    public int $favouriteCount = 0;
+    /**
      * @ORM\Column(type="datetimetz")
      */
     public DateTime $lastActive;
     /**
+     * @ORM\Column(type="string", nullable=true)
+     */
+    public ?string $ip = null;
+    /**
+     * @ORM\Column(type="array", nullable=true, options={"default" : null})
+     */
+    public ?array $tags = null;
+    /**
      * @ORM\OneToMany(targetEntity="EntryComment", mappedBy="parent", orphanRemoval=true)
+     * @OrderBy({"id" = "ASC"})
      */
     public Collection $children;
     /**
@@ -74,11 +90,15 @@ class EntryComment implements VoteInterface, VisibilityInterface, ReportInterfac
      */
     public Collection $votes;
     /**
-     * @ORM\OneToMany(targetEntity="App\Entity\EntryCommentReport", mappedBy="entryComment", cascade={"remove"}, orphanRemoval=true)
+     * @ORM\OneToMany(targetEntity="App\Entity\EntryCommentReport", mappedBy="entryComment", cascade={"remove"}, orphanRemoval=true, fetch="EXTRA_LAZY")
      */
     public Collection $reports;
     /**
-     * @ORM\OneToMany(targetEntity="EntryCommentCreatedNotification", mappedBy="entryComment", cascade={"remove"}, orphanRemoval=true)
+     * @ORM\OneToMany(targetEntity="App\Entity\EntryCommentFavourite", mappedBy="entryComment", cascade={"remove"}, orphanRemoval=true, fetch="EXTRA_LAZY")
+     */
+    public Collection $favourites;
+    /**
+     * @ORM\OneToMany(targetEntity="EntryCommentCreatedNotification", mappedBy="entryComment", cascade={"remove"}, orphanRemoval=true, fetch="EXTRA_LAZY")
      */
     public Collection $notifications;
     /**
@@ -88,15 +108,17 @@ class EntryComment implements VoteInterface, VisibilityInterface, ReportInterfac
      */
     private int $id;
 
-    public function __construct(string $body, ?Entry $entry, User $user, ?EntryComment $parent = null)
+    public function __construct(string $body, ?Entry $entry, User $user, ?EntryComment $parent = null, ?string $ip = null)
     {
         $this->body          = $body;
         $this->entry         = $entry;
         $this->user          = $user;
         $this->parent        = $parent;
+        $this->ip            = $ip;
         $this->votes         = new ArrayCollection();
         $this->children      = new ArrayCollection();
         $this->reports       = new ArrayCollection();
+        $this->favourites    = new ArrayCollection();
         $this->notifications = new ArrayCollection();
 
         if ($parent) {
@@ -199,6 +221,21 @@ class EntryComment implements VoteInterface, VisibilityInterface, ReportInterfac
     public function getUser(): ?User
     {
         return $this->user;
+    }
+
+    public function updateCounts(): self
+    {
+        $this->favouriteCount = $this->favourites->count();
+
+        return $this;
+    }
+
+    public function isFavored(User $user): bool
+    {
+        $criteria = Criteria::create()
+            ->where(Criteria::expr()->eq('user', $user));
+
+        return $this->favourites->matching($criteria)->count() > 0;
     }
 
     public function __sleep()

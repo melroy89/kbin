@@ -18,6 +18,10 @@ class UserChecker implements UserCheckerInterface
         if (!$user->isVerified) {
             throw new CustomUserMessageAccountStatusException('Twoje konto nie jest aktywne.');
         }
+
+        if ($user->isBanned) {
+            throw new CustomUserMessageAccountStatusException('Twoje konto jest zbanowane.');
+        }
     }
 
     public function checkPostAuth(UserInterface $user)

@@ -7,11 +7,13 @@ resources:
     collectionOperations:
       get:
         method: GET
+      post:
+        method: POST
     itemOperations:
       get:
         method: GET
     attributes:
       normalization_context:
-        groups: [ 'user_read' ]
+        groups: [ 'user:get' ]
       denormalization_context:
-        groups: [ 'user_write' ]
+        groups: [ 'user:write' ]

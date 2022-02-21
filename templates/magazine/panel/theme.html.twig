@@ -1,10 +1,11 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Wygląd | /m/{{ magazine.name }} | {{ parent() }}{% endblock %}
+{% block title %}{{ 'appearance'|trans }} | /m/{{ magazine.name }} | {{ parent() }}{% endblock %}
 
 {% block body %}
     <div class="kbin-magazine-edit-page">
         {% include 'magazine/panel/_tabs.html.twig' %}
+        {% include '_layout/_flash.html.twig' %}
         <div class="kbin-theme-edit mt-lg-4">
             {% include 'magazine/panel/_form_theme.html.twig' %}
         </div>

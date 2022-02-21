@@ -1,8 +1,9 @@
-<?php declare(strict_types=1);
+<?php declare(strict_types = 1);
 
 namespace App\Repository;
 
 use App\Entity\PostComment;
+use App\Entity\User;
 use App\PageView\PostCommentPageView;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Types\Types;
@@ -45,7 +46,7 @@ class PostCommentRepository extends ServiceEntityRepository
         );
 
         try {
-            $pagerfanta->setMaxPerPage(self::PER_PAGE);
+            $pagerfanta->setMaxPerPage($criteria->perPage ?? self::PER_PAGE);
             $pagerfanta->setCurrentPage($criteria->page);
         } catch (NotValidCurrentPageException $e) {
             throw new NotFoundHttpException();
@@ -100,6 +101,8 @@ class PostCommentRepository extends ServiceEntityRepository
             default:
                 $qb->addOrderBy('c.id', 'ASC');
         }
+
+        $qb->addOrderBy('c.createdAt', 'DESC');
     }
 
     public function hydrate(PostComment ...$comment): void
@@ -122,12 +125,26 @@ class PostCommentRepository extends ServiceEntityRepository
             $this->_em->createQueryBuilder()
                 ->select('PARTIAL c.{id}')
                 ->addSelect('cv')
+                ->addSelect('cf')
                 ->from(PostComment::class, 'c')
                 ->leftJoin('c.votes', 'cv')
+                ->leftJoin('c.favourites', 'cf')
                 ->where('c IN (?1)')
                 ->setParameter(1, $comment)
                 ->getQuery()
                 ->getResult();
         }
+    }
+
+    public function findToDelete(User $user, int $limit): array
+    {
+        return $this->createQueryBuilder('c')
+            ->where('c.visibility != :visibility')
+            ->andWhere('c.user = :user')
+            ->setParameters(['visibility' => PostComment::VISIBILITY_SOFT_DELETED, 'user' => $user])
+            ->orderBy('c.id', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
     }
 }

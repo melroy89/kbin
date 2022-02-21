@@ -1,33 +1,13 @@
 {% for magazine in magazines %}
-    <div class="card mb-3">
-        <div class="row g-0">
-            <div class="col-md-4">
-                {% if magazine.cover %}
-                    <img src="{{ asset(magazine.cover.filePath) | imagine_filter('post_thumb') }}" class="img-thumbnail"
-                         alt="{{ magazine.name }}">
-                {% else %}
-                    <svg class="bd-placeholder-img" width="100%" height="150" xmlns="http://www.w3.org/2000/svg" role="img"
-                         aria-label="Placeholder: Image" preserveAspectRatio="xMidYMid slice" focusable="false"><title>Placeholder</title>
-                        <rect width="100%" height="100%" fill="#868e96"></rect>
-                    </svg>
-                {% endif %}
-            </div>
-            <div class="col-md-8">
-                <div class="card-body">
-                    <h5 class="card-title"><span class="small font-weight-light text-muted">/m/</span><a
-                                href="{{ path('front_magazine', {'name': magazine.name}) }}" class="font-weight-bolder ms-1">{{ magazine.name }}</a>
-                    </h5>
-                    <h5 class="card-subtitle font-weight-bold mb-3 text-muted">{{ magazine.title }}</h5>
-
-                    {% include 'magazine/_sub_button.html.twig' %}
-
-                    <p class="card-text mt-3 text-muted">{{ magazine.description|slice(0, 250) }} {{ magazine.description|length > 250 ? '...' : '' }}</p>
-                </div>
+    <div class="px-lg-5 mx-lg-5 row mb-5">
+        <div class="px-lg-5">
+            <div class="px-lg-5">
+                {{ component('magazine', {magazine: magazine}) }}
             </div>
         </div>
     </div>
 {% endfor %}
 
 {% if(magazines.haveToPaginate) %}
-    {{ pagerfanta(magazines, null, {'pageParameter':'[strona]'}) }}
+    {{ pagerfanta(magazines, null, {'pageParameter':'[p]'}) }}
 {% endif %}

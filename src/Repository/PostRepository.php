@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace App\Repository;
 
@@ -8,6 +8,7 @@ use App\Entity\MagazineBlock;
 use App\Entity\MagazineSubscription;
 use App\Entity\Moderator;
 use App\Entity\Post;
+use App\Entity\User;
 use App\Entity\UserBlock;
 use App\Entity\UserFollow;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -30,7 +31,7 @@ use Symfony\Component\Security\Core\Security;
 class PostRepository extends ServiceEntityRepository
 {
     const PER_PAGE = 15;
-    const SORT_DEFAULT = 'aktywne';
+    const SORT_DEFAULT = 'active';
 
     private Security $security;
 
@@ -50,7 +51,7 @@ class PostRepository extends ServiceEntityRepository
         );
 
         try {
-            $pagerfanta->setMaxPerPage(self::PER_PAGE);
+            $pagerfanta->setMaxPerPage($criteria->perPage ?? self::PER_PAGE);
             $pagerfanta->setCurrentPage($criteria->page);
         } catch (NotValidCurrentPageException $e) {
             throw new NotFoundHttpException();
@@ -101,6 +102,11 @@ class PostRepository extends ServiceEntityRepository
                 ->setParameter('user', $criteria->user);
         }
 
+        if ($criteria->tag) {
+            $qb->andWhere($qb->expr()->like('p.tags', ':tag'))
+                ->setParameter('tag', "%{$criteria->tag}%");
+        }
+
         if ($criteria->subscribed) {
             $qb->andWhere(
                 'p.magazine IN (SELECT IDENTITY(ms.magazine) FROM '.MagazineSubscription::class.' ms WHERE ms.user = :user) 
@@ -129,6 +135,12 @@ class PostRepository extends ServiceEntityRepository
             $qb->setParameter('magazineBlocker', $user);
         }
 
+        if(!$user || $user->hideAdult) {
+            $qb->andWhere('m.isAdult = :isAdult')
+                ->andWhere('p.isAdult = :isAdult')
+                ->setParameter('isAdult', false);
+        }
+
         switch ($criteria->sortOption) {
             case Criteria::SORT_HOT:
                 $qb->orderBy('p.score', 'DESC');
@@ -146,6 +158,8 @@ class PostRepository extends ServiceEntityRepository
             default:
                 $qb->orderBy('p.id', 'DESC');
         }
+
+        $qb->addOrderBy('p.createdAt', 'DESC');
 
         return $qb;
     }
@@ -170,8 +184,10 @@ class PostRepository extends ServiceEntityRepository
             $this->_em->createQueryBuilder()
                 ->select('PARTIAL p.{id}')
                 ->addSelect('pv')
+                ->addSelect('pf')
                 ->from(Post::class, 'p')
                 ->leftJoin('p.votes', 'pv')
+                ->leftJoin('p.favourites', 'pf')
                 ->where('p IN (?1)')
                 ->setParameter(1, $posts)
                 ->getQuery()
@@ -189,5 +205,17 @@ class PostRepository extends ServiceEntityRepository
                 ->getQuery()
                 ->getSingleScalarResult()
         );
+    }
+
+    public function findToDelete(User $user, int $limit): array
+    {
+        return $this->createQueryBuilder('p')
+            ->where('p.visibility != :visibility')
+            ->andWhere('p.user = :user')
+            ->setParameters(['visibility' => Post::VISIBILITY_SOFT_DELETED, 'user' => $user])
+            ->orderBy('p.id', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
     }
 }

@@ -1,11 +1,20 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}{{ magazine.title }} | /m/{{ magazine.name }} | {{ parent() }}{% endblock %}
+{% block title %}
+    {{ magazine.title ~ (is_active_sort_option('sort.hot'|trans|lower, true) ? '' : ' - ' ~ get_active_sort_option()|capitalize) }}
+{% endblock %}
+{% block description %}{{ magazine.description ? get_short_desc(magazine.description) : '' }}{% endblock %}
+{% block image %}{{ magazine.cover ? uploaded_asset(magazine.cover.filePath) : '' }}{% endblock %}
 
 {% block body %}
     <div class="kbin-magazine-page">
         {% include '_layout/_filters.html.twig' %}
-        {% include 'entry/_list.html.twig' %}
+        {% include '_layout/_flash.html.twig' %}
+        {% if magazine.isAdult and (not app.user or app.user.hideAdult) %}
+            {% include '_layout/_adult.html.twig' %}
+        {% else %}
+            {% include 'entry/_list.html.twig' %}
+        {% endif %}
     </div>
 {% endblock %}
 

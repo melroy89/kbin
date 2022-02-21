@@ -1,9 +1,9 @@
-<?php declare(strict_types=1);
+<?php declare(strict_types = 1);
 
 namespace App\EventSubscriber\EntryComment;
 
 use App\Event\EntryComment\EntryCommentCreatedEvent;
-use App\Message\EntryCommentCreatedNotificationMessage;
+use App\Message\Notification\EntryCommentCreatedNotificationMessage;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\Messenger\MessageBusInterface;
 

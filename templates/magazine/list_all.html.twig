@@ -1,12 +1,19 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Magazyny | {{ parent() }}{% endblock %}
+{% block title %}{{ 'topbar.all_magazines'|trans }}{% endblock %}
 
 {% block body %}
     <div class="kbin-magazines-list-page mt-lg-4">
-        <h1 class="font-weight-bold mb-5">Magazyny</h1>
+        <form method="get" action="{{ path('magazine_list_all') }}">
+            <div class="input-group input-group-lg mb-5 mt-5" style="max-width: 500px;margin:auto;">
+                <input name="q" type="text" class="form-control" value="{{ app.request.get('q') }}">
+                <button class="btn btn-outline-secondary" type="submit">{{ 'search'|trans }}</button>
+            </div>
+        </form>
 
-        {% include'magazine/_list_cards.html.twig' %}
+        <div class="pt-5">
+            {% include'magazine/_list_cards.html.twig' %}
+        </div>
     </div>
 {% endblock %}
 

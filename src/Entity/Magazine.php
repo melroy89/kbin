@@ -118,19 +118,24 @@ class Magazine implements VisibilityInterface
      */
     public Collection $logs;
     /**
+     * @ORM\Column(type="datetimetz", nullable=true)
+     */
+    public ?DateTime $lastActive = null;
+    /**
      * @ORM\Id
      * @ORM\GeneratedValue
      * @ORM\Column(type="integer")
      */
     private int $id;
 
-    public function __construct(string $name, string $title, User $user, ?string $description, ?string $rules, ?bool $isAdult)
+    public function __construct(string $name, string $title, User $user, ?string $description, ?string $rules, ?bool $isAdult, ?Image $cover)
     {
         $this->name          = $name;
         $this->title         = $title;
         $this->description   = $description;
         $this->rules         = $rules;
         $this->isAdult       = $isAdult ?? false;
+        $this->cover         = $cover;
         $this->moderators    = new ArrayCollection();
         $this->entries       = new ArrayCollection();
         $this->posts         = new ArrayCollection();
@@ -285,11 +290,9 @@ class Magazine implements VisibilityInterface
         return $this->subscriptions->matching($criteria)->count() > 0;
     }
 
-    private function updateSubscriptionsCount(): self
+    private function updateSubscriptionsCount(): void
     {
         $this->subscriptionsCount = $this->subscriptions->count();
-
-        return $this;
     }
 
     public function unsubscribe(User $user): void

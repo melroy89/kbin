@@ -7,17 +7,29 @@ resources:
     collectionOperations:
       get:
         method: GET
+        normalization_context:
+          groups: [ 'magazine:collection:get' ]
+      post:
+        method: POST
+      random:
+        method: GET
+        path: /random_magazines.{_format}
+        controller: App\Controller\Api\RandomMagazine
+        normalization_context:
+          groups: [ 'magazine:item:get' ]
     itemOperations:
       get:
         method: GET
+        normalization_context:
+          groups: [ 'magazine:item:get' ]
       badges:
         method: GET
         path: /magazines/{name}/badges.{_format}
         controller: App\Controller\Api\MagazineBadges
         normalization_context:
-          groups: [ 'badge_read' ]
+          groups: [ 'badge:read' ]
     attributes:
       normalization_context:
-        groups: [ 'magazine_read' ]
+        groups: [ 'magazine:read' ]
       denormalization_context:
-        groups: [ 'magazine_write' ]
+        groups: [ 'magazine:write' ]

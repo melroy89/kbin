@@ -1,24 +1,38 @@
-<?php declare(strict_types=1);
+<?php declare(strict_types = 1);
 
 namespace App\Service;
 
 use App\Entity\Contracts\VoteInterface;
 use App\Entity\User;
 use App\Entity\Vote;
+use App\Event\VoteEvent;
 use App\Factory\VoteFactory;
+use App\Message\Notification\VoteNotificationMessage;
+use Doctrine\Common\Util\ClassUtils;
 use Doctrine\ORM\EntityManagerInterface;
 use LogicException;
+use Psr\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
+use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
 
 class VoteManager
 {
     public function __construct(
         private VoteFactory $factory,
+        private RateLimiterFactory $voteLimiter,
+        private EventDispatcherInterface $dispatcher,
         private EntityManagerInterface $entityManager
     ) {
     }
 
     public function vote(int $choice, VoteInterface $votable, User $user): Vote
     {
+        $limiter = $this->voteLimiter->create($user->username);
+        if (false === $limiter->consume()->isAccepted()) {
+            throw new TooManyRequestsHttpException();
+        }
+
         $vote = $votable->getUserVote($user);
 
         if ($vote) {
@@ -37,6 +51,8 @@ class VoteManager
         $votable->updateVoteCounts();
 
         $this->entityManager->flush();
+
+        $this->dispatcher->dispatch(new VoteEvent($votable));
 
         return $vote;
     }

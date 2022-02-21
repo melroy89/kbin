@@ -1,4 +1,24 @@
 .kbin-sidebar {
+  @include media-breakpoint-up(lg) {
+    .offcanvas {
+      z-index: 100;
+      visibility: visible !important;
+      display: block !important;
+      position: relative !important;
+      width: auto !important;
+      transform: none !important;
+      border: none !important;
+      background: none !important;
+    }
+  }
+
+  @include media-breakpoint-down(lg) {
+    .offcanvas {
+      padding: $spacer * .5;
+    }
+  }
+
+
   .kbin-search {
     &-btn {
       border: 1px solid $kbin-sidebar-button-border-color;
@@ -7,6 +27,18 @@
   }
 
   .kbin-add {
+    a {
+      border-bottom: 1px solid #c5c5c5;
+    }
+
+    &-btn {
+      border-bottom: 1px solid $kbin-entry-list-item-border-color;
+
+      .kbin-dark & {
+        border-bottom: 1px solid $kbin-dark-entry-list-item-border-color;
+      }
+    }
+
     .kbin-quick-links {
       &--hide {
         display: none;
@@ -43,11 +75,6 @@
     .lead {
       font-size: 1rem;
     }
-
-    &-stats {
-      color: white;
-      font-size: .9rem;
-    }
   }
 
   .kbin-entry {
@@ -55,16 +82,15 @@
 
     &-avatar {
       img {
-        width: 4rem;
+        width: 6.6rem;
       }
     }
   }
 
-  .kbin-moderators {
-    .kbin-avatar {
-      max-width: 2rem;
-      float: left;
-      margin-right: .5rem;
+  .kbin-entry-info-user,
+  .kbin-post-info-user {
+    .card-title {
+      font-size: .9rem;
     }
   }
 }

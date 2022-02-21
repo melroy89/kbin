@@ -1,22 +1,22 @@
-<?php declare(strict_types=1);
+<?php declare(strict_types = 1);
 
 namespace App\Factory;
 
 use App\DTO\ReportDto;
 use App\Entity\Report;
 use App\Entity\User;
+use Doctrine\ORM\EntityManagerInterface;
 
 class ReportFactory
 {
-    public function createFromDto(ReportDto $dto, User $reporting): Report
+    public function __construct(private EntityManagerInterface $entityManager)
     {
-        $className = get_class($dto->getSubject()).'Report';
-
-        return new $className($reporting, $dto->getSubject()->user, $dto->getSubject(), $dto->reason);
     }
 
-//    public function createDto(Entry $entry): ReportDto
-//    {
-//
-//    }
+    public function createFromDto(ReportDto $dto): Report
+    {
+        $className = $this->entityManager->getClassMetadata(get_class($dto->getSubject()))->name.'Report';
+
+        return new $className($dto->getSubject()->user, $dto->getSubject(), $dto->reason);
+    }
 }

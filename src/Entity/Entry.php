@@ -4,6 +4,7 @@ namespace App\Entity;
 
 use App\Entity\Contracts\CommentInterface;
 use App\Entity\Contracts\DomainInterface;
+use App\Entity\Contracts\FavouriteInterface;
 use App\Entity\Contracts\RankingInterface;
 use App\Entity\Contracts\ReportInterface;
 use App\Entity\Contracts\VisibilityInterface;
@@ -25,7 +26,7 @@ use Webmozart\Assert\Assert;
 /**
  * @ORM\Entity(repositoryClass=EntryRepository::class)
  */
-class Entry implements VoteInterface, CommentInterface, DomainInterface, VisibilityInterface, RankingInterface, ReportInterface, ViewCountable
+class Entry implements VoteInterface, CommentInterface, DomainInterface, VisibilityInterface, RankingInterface, ReportInterface, FavouriteInterface, ViewCountable
 {
     use VotableTrait;
     use RankingTrait;
@@ -56,7 +57,11 @@ class Entry implements VoteInterface, CommentInterface, DomainInterface, Visibil
     /**
      * @ORM\ManyToOne(targetEntity=Domain::class, inversedBy="entries")
      */
-    public Domain $domain;
+    public ?Domain $domain = null;
+    /**
+     * @ORM\Column(type="string", length=255, nullable=true)
+     */
+    public ?string $slug = null;
     /**
      * @ORM\Column(type="string", length=255)
      */
@@ -66,13 +71,21 @@ class Entry implements VoteInterface, CommentInterface, DomainInterface, Visibil
      */
     public ?string $url = null;
     /**
-     * @ORM\Column(type="text", nullable=true, length=15000)
+     * @ORM\Column(type="text", nullable=true, length=35000)
      */
     public ?string $body = null;
     /**
      * @ORM\Column(type="string")
      */
     public string $type = self::ENTRY_TYPE_ARTICLE;
+    /**
+     * @ORM\Column(type="string", nullable=true, options={"default" : null})
+     */
+    public ?string $lang = null;
+    /**
+     * @ORM\Column(type="boolean", options={"default" : false})
+     */
+    public bool $isOc = false;
     /**
      * @ORM\Column(type="boolean")
      */
@@ -81,6 +94,10 @@ class Entry implements VoteInterface, CommentInterface, DomainInterface, Visibil
      * @ORM\Column(type="integer")
      */
     public int $commentCount = 0;
+    /**
+     * @ORM\Column(type="integer", options={"default": 0})
+     */
+    public int $favouriteCount = 0;
     /**
      * @ORM\Column(type="integer")
      */
@@ -102,24 +119,39 @@ class Entry implements VoteInterface, CommentInterface, DomainInterface, Visibil
      */
     public ?DateTime $lastActive;
     /**
-     * @ORM\OneToMany(targetEntity=EntryComment::class, mappedBy="entry", orphanRemoval=true)
+     * @ORM\Column(type="string", nullable=true)
+     */
+    public ?string $ip = null;
+    /**
+     * @ORM\Column(type="integer", options={"default" : 0})
+     */
+    public int $adaAmount = 0;
+    /**
+     * @ORM\Column(type="array", nullable=true, options={"default" : null})
+     */
+    public ?array $tags = null;
+    /**
+     * @ORM\OneToMany(targetEntity=EntryComment::class, mappedBy="entry", orphanRemoval=true, fetch="EXTRA_LAZY")
      */
     public Collection $comments;
     /**
-     * @ORM\OneToMany(targetEntity=EntryVote::class, mappedBy="entry", cascade={"persist"},
-     *     fetch="EXTRA_LAZY", orphanRemoval=true)
+     * @ORM\OneToMany(targetEntity=EntryVote::class, mappedBy="entry", cascade={"persist"}, orphanRemoval=true, fetch="EXTRA_LAZY")
      */
     public Collection $votes;
     /**
-     * @ORM\OneToMany(targetEntity="EntryReport", mappedBy="entry", cascade={"remove"}, orphanRemoval=true)
+     * @ORM\OneToMany(targetEntity="EntryReport", mappedBy="entry", cascade={"remove"}, orphanRemoval=true, fetch="EXTRA_LAZY")
      */
     public Collection $reports;
     /**
-     * @ORM\OneToMany(targetEntity="EntryCreatedNotification", mappedBy="entry", cascade={"remove"}, orphanRemoval=true)
+     * @ORM\OneToMany(targetEntity="App\Entity\EntryFavourite", mappedBy="entry", cascade={"remove"}, orphanRemoval=true, fetch="EXTRA_LAZY")
+     */
+    public Collection $favourites;
+    /**
+     * @ORM\OneToMany(targetEntity="EntryCreatedNotification", mappedBy="entry", cascade={"remove"}, orphanRemoval=true, fetch="EXTRA_LAZY")
      */
     public Collection $notifications;
     /**
-     * @ORM\OneToMany(targetEntity="ViewCounter", mappedBy="entry", cascade={"remove"}, orphanRemoval=true)
+     * @ORM\OneToMany(targetEntity="ViewCounter", mappedBy="entry", cascade={"remove"}, orphanRemoval=true, fetch="EXTRA_LAZY")
      */
     public Collection $viewCounters;
     /**
@@ -127,26 +159,44 @@ class Entry implements VoteInterface, CommentInterface, DomainInterface, Visibil
      */
     public Collection $badges;
     /**
+     * @ORM\OneToMany(targetEntity="App\Entity\EntryCardanoTx", mappedBy="entry", cascade={"remove", "persist"}, orphanRemoval=true)
+     */
+    public Collection $cardanoTx;
+    /**
      * @ORM\Id
      * @ORM\GeneratedValue
      * @ORM\Column(type="integer")
      */
     private int $id;
 
-    public function __construct(string $title, ?string $url, ?string $body, Magazine $magazine, User $user, ?bool $isAdult = null)
-    {
+    public function __construct(
+        string $title,
+        ?string $url,
+        ?string $body,
+        Magazine $magazine,
+        User $user,
+        ?bool $isAdult,
+        ?bool $isOc,
+        ?string $lang,
+        ?string $ip = null
+    ) {
         $this->title         = $title;
         $this->url           = $url;
         $this->body          = $body;
         $this->magazine      = $magazine;
         $this->user          = $user;
         $this->isAdult       = $isAdult ?? false;
+        $this->isOc          = $isOc;
+        $this->lang          = $lang;
+        $this->ip            = $ip;
         $this->comments      = new ArrayCollection();
         $this->votes         = new ArrayCollection();
         $this->reports       = new ArrayCollection();
+        $this->favourites    = new ArrayCollection();
         $this->notifications = new ArrayCollection();
         $this->viewCounters  = new ArrayCollection();
         $this->badges        = new ArrayCollection();
+        $this->cardanoTx     = new ArrayCollection();
 
         $user->addEntry($this);
 
@@ -221,7 +271,8 @@ class Entry implements VoteInterface, CommentInterface, DomainInterface, Visibil
         $criteria = Criteria::create()
             ->andWhere(Criteria::expr()->eq('visibility', VisibilityInterface::VISIBILITY_VISIBLE));
 
-        $this->commentCount = $this->comments->matching($criteria)->count();
+        $this->commentCount   = $this->comments->matching($criteria)->count();
+        $this->favouriteCount = $this->favourites->count();
 
         return $this;
     }
@@ -342,6 +393,26 @@ class Entry implements VoteInterface, CommentInterface, DomainInterface, Visibil
     public function setViews($views)
     {
         $this->views = $views;
+    }
+
+    public function getAdaAmount(): string
+    {
+        $amount = $this->adaAmount / 1000000;
+
+        return $amount > 0 ? (string) $amount : '';
+    }
+
+    public function isAdult(): bool
+    {
+        return $this->isAdult || $this->magazine->isAdult;
+    }
+
+    public function isFavored(User $user): bool
+    {
+        $criteria = Criteria::create()
+            ->where(Criteria::expr()->eq('user', $user));
+
+        return $this->favourites->matching($criteria)->count() > 0;
     }
 
     public function __sleep()

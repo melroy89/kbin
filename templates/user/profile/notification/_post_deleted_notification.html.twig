@@ -1,4 +1,15 @@
-{% from 'magazine/_macros.html.twig' import magazine %}
+{% from '_layout/_macros.html.twig' import post_url %}
 
-Moderator usunął twój wpis w {{ magazine(notification.post.magazine) }} - <strong><a
-            href="{{ path('post_single', {'magazine_name': notification.post.magazine.name, 'post_id': notification.post.id}) }}">{{ notification.post.shortTitle }}</a></strong>
+<div class="toast-header">
+    <strong class="me-auto">{{ component('magazine_inline', { magazine: notification.post.magazine }) }}</strong>
+    <small class="text-muted">
+        <time data-controller="timeago"
+              data-timeago-refresh-interval-value="10000"
+              data-timeago-datetime-value="{{ notification.createdAt|date('c') }}">{{ notification.createdAt|ago }}</time>
+    </small>
+    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+</div>
+<div class="toast-body">
+    <strong><a href="{{ post_url(notification.post) }}">{{ notification.post.shortTitle }}</a></strong>
+    {% if notification.post.isTrashed %}{{ 'removed'|trans }}{% else %}{{ 'deleted'|trans }}{% endif %}
+</div>

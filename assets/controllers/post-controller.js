@@ -1,14 +1,13 @@
-import {Controller} from 'stimulus';
+import {Controller} from '@hotwired/stimulus';
 import {fetch, ok} from "../utils/http";
 import router from "../utils/routing";
 import KEditor from "../utils/editor";
 
 export default class extends Controller {
-    static targets = ['expand', 'form'];
+    static targets = ['expand', 'form', 'commentCounter'];
     static values = {
         loading: Boolean,
         id: Number,
-        magazineName: String,
         commentList: String,
         form: String,
     };
@@ -19,7 +18,7 @@ export default class extends Controller {
         this.loadingValue = true;
 
         try {
-            let url = router().generate('post_comment_create', {'magazine_name': this.magazineNameValue, 'post_id': this.idValue});
+            const url = event.target.href;
 
             let response = await fetch(url, {method: 'GET'});
 
@@ -46,14 +45,15 @@ export default class extends Controller {
         this.loadingValue = true;
 
         try {
-            let url = router().generate('post_comment_create', {'magazine_name': this.magazineNameValue, 'post_id': this.idValue});
+            const url = event.target.action;
 
             let response = await fetch(url, {method: 'POST', body: new FormData(event.target)});
 
             response = await ok(response);
             response = await response.json();
 
-            this.element.insertAdjacentHTML('afterend', response.html);
+            this.element.nextElementSibling.insertAdjacentHTML('beforeend', response.html);
+
             event.target.parentNode.innerHTML = ''
         } catch (e) {
             alert('Nie możesz dodać komentarza.');
@@ -62,7 +62,7 @@ export default class extends Controller {
         }
     }
 
-    async expandComments(event) {
+    async expand(event) {
         event.preventDefault();
 
         this.loadingValue = true;
@@ -70,10 +70,10 @@ export default class extends Controller {
         let loader = document.createElement("span");
         loader.classList.add('spinner-border', 'me-2');
 
-        event.target.parentNode.replaceChild(loader, event.target);
+        this.expandTarget.parentNode.replaceChild(loader, this.expandTarget)
 
         try {
-            let url = router().generate('ajax_fetch_post_comments', {'id': this.idValue});
+            const url = router().generate('ajax_fetch_post_comments', {'id': this.idValue});
 
             let response = await fetch(url, {method: 'GET'});
 
@@ -81,16 +81,56 @@ export default class extends Controller {
             response = await response.json();
 
             this.element.parentElement
-                .querySelectorAll(`[data-comment-post-id="${this.idValue}"]`)
+                .querySelectorAll(`[data-comment-list-subject-id-value="${this.idValue}"]`)
                 .forEach(e => {
                     e.remove()
                 })
+
             this.element.insertAdjacentHTML('afterend', response.html);
         } catch (e) {
             alert('Coś poszło nie tak...')
         } finally {
             loader.remove();
             this.loadingValue = false;
+        }
+    }
+
+    remove(notification) {
+        if (this.idValue !== notification.detail.id) {
+            return;
+        }
+
+        this.element.remove();
+        document.querySelector(`[data-comment-list-subject-id-value='${notification.detail.id}']`).remove()
+    }
+
+    async edit(notification) {
+        if (this.idValue !== notification.detail.id) {
+            return;
+        }
+
+        try {
+            const url = router().generate('ajax_fetch_post', {'id': notification.detail.id});
+
+            let response = await fetch(url, {method: 'GET'});
+
+            response = await ok(response);
+            response = await response.json();
+
+            this.element.outerHTML = response.html;
+        } catch (e) {
+        }
+    }
+
+    increaseComments(notification) {
+        if (this.idValue === notification.detail.subject.id && this.hasCommentCounterTarget) {
+            this.commentCounterTarget.textContent = Number(this.commentCounterTarget.textContent) + 1;
+        }
+    }
+
+    decreaseComments(notification) {
+        if (this.idValue === notification.detail.subject.id && this.hasCommentCounterTarget) {
+            this.commentCounterTarget.textContent = Number(this.commentCounterTarget.textContent) - 1;
         }
     }
 }

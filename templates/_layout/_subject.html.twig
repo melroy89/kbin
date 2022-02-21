@@ -1,14 +1,22 @@
-{% from 'entry/_macros.html.twig' import entry %}
-{% from 'entry/comment/_macros.html.twig' import comment as entry_comment %}
-{% from 'post/_macros.html.twig' import post %}
-{% from 'post/comment/_macros.html.twig' import comment as post_comment %}
+{% set canSeeTrash = canSeeTrash ?? false %}
+{% set withParent = withParent ?? true %}
+{% set nested = nested ?? true %}
 
 {% if subject is entry %}
-    {{ entry(subject) }}
+    {{ component('entry', {entry: subject, showMagazine: true, canSeeTrash: canSeeTrash}) }}
 {% elseif subject is entry_comment %}
-    {{ entry_comment(subject, {with_parent: true}) }}
+    {{ component('entry_comment', {comment: subject, withParent: withParent, canSeeTrash: canSeeTrash, nested: nested}) }}
 {% elseif subject is post %}
-    {{ post(subject) }}
+    {{ component('post', {post: subject, showMagazine: true, canSeeTrash: canSeeTrash}) }}
 {% elseif subject is post_comment %}
-    {{ post_comment(subject, {'with_parent': true}) }}
+    {{ component('post_comment', {comment: subject, withParent: withParent, canSeeTrash: canSeeTrash}) }}
+{% elseif subject is magazine %}
+
+    <div class="my-5 clearfix">
+        <div class="mx-5 px-5">
+            <div class="mx-5 px-5">
+                {{ component('magazine',{magazine: subject}) }}
+            </div>
+        </div>
+    </div>
 {% endif %}

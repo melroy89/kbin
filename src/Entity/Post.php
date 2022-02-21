@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use App\Entity\Contracts\CommentInterface;
+use App\Entity\Contracts\FavouriteInterface;
 use App\Entity\Contracts\RankingInterface;
 use App\Entity\Contracts\ReportInterface;
 use App\Entity\Contracts\VisibilityInterface;
@@ -22,7 +23,7 @@ use Webmozart\Assert\Assert;
 /**
  * @ORM\Entity(repositoryClass=PostRepository::class)
  */
-class Post implements VoteInterface, CommentInterface, VisibilityInterface, RankingInterface, ReportInterface
+class Post implements VoteInterface, CommentInterface, VisibilityInterface, RankingInterface, ReportInterface, FavouriteInterface
 {
     use VotableTrait;
     use RankingTrait;
@@ -47,6 +48,10 @@ class Post implements VoteInterface, CommentInterface, VisibilityInterface, Rank
      */
     public ?Image $image = null;
     /**
+     * @ORM\Column(type="string", length=255, nullable=true)
+     */
+    public ?string $slug = null;
+    /**
      * @ORM\Column(type="text", nullable=true, length=15000)
      */
     public ?string $body = null;
@@ -54,6 +59,10 @@ class Post implements VoteInterface, CommentInterface, VisibilityInterface, Rank
      * @ORM\Column(type="integer")
      */
     public int $commentCount = 0;
+    /**
+     * @ORM\Column(type="integer", options={"default": 0})
+     */
+    public int $favouriteCount = 0;
     /**
      * @ORM\Column(type="integer")
      */
@@ -66,6 +75,14 @@ class Post implements VoteInterface, CommentInterface, VisibilityInterface, Rank
      * @ORM\Column(type="datetimetz")
      */
     public ?DateTime $lastActive;
+    /**
+     * @ORM\Column(type="string", nullable=true)
+     */
+    public ?string $ip = null;
+    /**
+     * @ORM\Column(type="array", nullable=true, options={"default" : null})
+     */
+    public ?array $tags = null;
     /**
      * @ORM\OneToMany(targetEntity=PostComment::class, mappedBy="post", orphanRemoval=true)
      */
@@ -80,6 +97,10 @@ class Post implements VoteInterface, CommentInterface, VisibilityInterface, Rank
      */
     public Collection $reports;
     /**
+     * @ORM\OneToMany(targetEntity="App\Entity\PostFavourite", mappedBy="post", cascade={"remove"}, orphanRemoval=true)
+     */
+    public Collection $favourites;
+    /**
      * @ORM\OneToMany(targetEntity="PostCreatedNotification", mappedBy="post", cascade={"remove"}, orphanRemoval=true)
      */
     public Collection $notifications;
@@ -90,15 +111,17 @@ class Post implements VoteInterface, CommentInterface, VisibilityInterface, Rank
      */
     private int $id;
 
-    public function __construct(string $body, Magazine $magazine, User $user, ?bool $isAdult = false)
+    public function __construct(string $body, Magazine $magazine, User $user, ?bool $isAdult = false, ?string $ip = null)
     {
         $this->body          = $body;
         $this->magazine      = $magazine;
         $this->user          = $user;
         $this->isAdult       = $isAdult ?? false;
+        $this->ip            = $ip;
         $this->comments      = new ArrayCollection();
         $this->votes         = new ArrayCollection();
         $this->reports       = new ArrayCollection();
+        $this->favourites    = new ArrayCollection();
         $this->notifications = new ArrayCollection();
 
         $user->addPost($this);
@@ -131,12 +154,28 @@ class Post implements VoteInterface, CommentInterface, VisibilityInterface, Rank
 
     public function getBestComments(): Collection
     {
-        return new ArrayCollection($this->comments->slice(0, 2));
+        $criteria = Criteria::create()
+            ->orderBy(['upVotes' => 'DESC', 'createdAt' => 'ASC']);
+
+        $comments = $this->comments->matching($criteria);
+        $comments = new ArrayCollection($comments->slice(0, 2));
+
+        $iterator = $comments->getIterator();
+        $iterator->uasort(function ($a, $b) {
+            return ($a->createdAt < $b->createdAt) ? -1 : 1;
+        });
+
+        return new ArrayCollection(iterator_to_array($iterator));
     }
 
     public function getLastComments(): Collection
     {
-        return new ArrayCollection($this->comments->slice(-2, 2));
+        $criteria = Criteria::create()
+            ->orderBy(['createdAt' => 'ASC']);
+
+        $comments = $this->comments->matching($criteria);
+
+        return new ArrayCollection($comments->slice(-2, 2));
     }
 
     public function addComment(PostComment $comment): self
@@ -158,7 +197,8 @@ class Post implements VoteInterface, CommentInterface, VisibilityInterface, Rank
         $criteria = Criteria::create()
             ->andWhere(Criteria::expr()->eq('visibility', VisibilityInterface::VISIBILITY_VISIBLE));
 
-        $this->commentCount = $this->comments->matching($criteria)->count();
+        $this->commentCount   = $this->comments->matching($criteria)->count();
+        $this->favouriteCount = $this->favourites->count();
 
         return $this;
     }
@@ -260,6 +300,14 @@ class Post implements VoteInterface, CommentInterface, VisibilityInterface, Rank
     public function getUser(): ?User
     {
         return $this->user;
+    }
+
+    public function isFavored(User $user): bool
+    {
+        $criteria = Criteria::create()
+            ->where(Criteria::expr()->eq('user', $user));
+
+        return $this->favourites->matching($criteria)->count() > 0;
     }
 
     public function __sleep()

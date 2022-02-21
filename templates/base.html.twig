@@ -1,56 +1,97 @@
 <!doctype html>
-<html lang="pl">
+<html lang="{{ app.request.locale }}">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}{{ kbin_title }}{% endblock %}</title>
 
-    <title>{% block title %}karab.in{% endblock %}</title>
+    <meta charset="utf-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="keywords" content="{{ kbin_keywords }}">
+    <meta name="description" content="{% block description %}{{ kbin_description }}{% endblock %}">
+
+    <meta property="og:url" content="{{ app.request.uri }}"/>
+    <meta property="og:type" content="article"/>
+    <meta property="og:title" content="{{ block('title') }}"/>
+    <meta property="og:description" content="{{ block('description') }}"/>
+    <meta property="og:image" content="{% block image %}{% endblock %}"/>
+
+    <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
 
     {% block stylesheets %}
         {{ encore_entry_link_tags('app') }}
+    {% endblock %}
 
-        {% if magazine is defined and magazine %}
-            <style>
-                {{ magazine.customCss }}
-            </style>
+    {% block javascripts %}
+        {% if kbin_js_enabled %}
+            <script>
+                window.KBIN_LOGGED_IN = {{ app.user ? 'true' : 'false' }};
+                window.KBIN_USERNAME = "{{ app.user ? app.user.username : null }}";
+                window.MERCURE_PUBLISH_URL = "{{ mercure_publish_url }}";
+            </script>
+            {{ encore_entry_script_tags('app') }}
         {% endif %}
     {% endblock %}
 </head>
-<body data-controller="kbin" class="{{ app.user and app.user.theme is same as 'dark' ? 'kbin-dark' : '' }}">
+
+{% set theme = app.request.cookies.get('theme') ?? 'kbin-light' %}
+{% if app.user %}
+    {% set theme = app.user.theme is same as 'dark' ? 'kbin-dark' : 'kbin-light' %}
+{% endif %}
+<body class="{{ theme }}">
+{% if magazine is defined and magazine %}
+    <style>
+        {{ magazine.customCss }}
+    </style>
+{% endif %}
 <div data-controller="scroll-progress" class="bg-primary scroll-progress"></div>
-<div id="kbin" data-controller="notify" {% if magazine is defined and magazine %}data-notify-magazine-name-value="{{ magazine.name }}"{% endif %}>
-    {% include '_layout/_topbar.html.twig' %}
-    {% include '_layout/_navbar.html.twig' %}
-    <section class="kbin-container container pt-3 pb-5">
+<div id="kbin"
+     data-controller="kbin notify-counter"
+     data-action="notify:Notification->notify-counter#notification"
+     data-action="notify:Message->notify-counter#message"
+     data-notify-counter-hidden-class="visually-hidden"
+     data-turbo="{% if app.user and app.user.mode is same as 'turbo' %}true{% else %}false{% endif %}">
+    <div class="fixed-top">
+        {% include '_layout/_topbar.html.twig' %}
+        {% include '_layout/_navbar.html.twig' %}
+    </div>
+    <section class="kbin-container container pt-3 mt-5 pb-5">
         <div class="row">
-            <div class="col-lg-9">
-                <main class="kbin-main">
-                    {% block body %}{% endblock %}
-                </main>
-            </div>
-            <div class="col-lg-3">
-                <aside class="kbin-sidebar">
+            <main class="kbin-main col-lg-9 mb-5">
+                {% block body %}{% endblock %}
+            </main>
+            <aside class="col-lg-3 kbin-sidebar">
+                <aside class="offcanvas offcanvas-end" id="kbin-sidebar">
+                    <div class="d-block d-lg-none">
+                        <button type="button" class="btn-close my-4 ms-1" data-bs-toggle="offcanvas" data-bs-target="#kbin-sidebar"
+                                aria-controls="kbin-nav" aria-expanded="false" aria-label="Toggle sidebar"></button>
+                    </div>
                     {% block sidebar %}
                         {% include '_layout/_sidebar.html.twig' %}
                     {% endblock %}
+                    {% block ads %}
+                        {{ component('ads') }}
+                    {% endblock %}
                 </aside>
-            </div>
+            </aside>
         </div>
     </section>
     {% include '_layout/_footer.html.twig' %}
 
-    <div aria-live="polite" aria-atomic="true" class="position-relative">
-        <div class="kbin-toast-container toast-container position-fixed bottom-0 end-0 p-3">
+    {% if kbin_js_enabled and not app.request.cookies.get('cookie-info') %}
+        <div class="kbin-cookies" data-controller="cookie-info">
+            <div class="container py-3 text-center">
+                <p>Ta strona korzysta z ciasteczek (cookies), które używane są do obsługi logowania i zapamiętania motywu niezalogowanego
+                    użytkownika.</p>
+                <button data-action="click->cookie-info#close" type="button" class="btn btn-primary">Rozumiem</button>
+            </div>
+        </div>
+    {% endif %}
+
+    <div aria-live="polite" aria-atomic="true" class="position-relative d-none d-lg-block">
+        <div class="kbin-toast-container toast-container position-fixed bottom-0 end-0 p-3 d-flex flex-column">
 
         </div>
     </div>
 </div>
-
-{% block javascripts %}
-    {% if kbin_js_enabled %}
-        {{ encore_entry_script_tags('app') }}
-    {% endif %}
-{% endblock %}
-
 </body>
 </html>

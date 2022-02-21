@@ -4,6 +4,7 @@ namespace App\Service;
 
 use App\Exception\CorruptedFileException;
 use App\Exception\ImageDownloadTooLargeException;
+use Doctrine\ORM\EntityManagerInterface;
 use Exception;
 use League\Flysystem\FilesystemInterface;
 use RuntimeException;
@@ -24,7 +25,7 @@ class ImageManager
         private FilesystemInterface $publicUploadsFilesystem,
         private HttpClientInterface $httpClient,
         private MimeTypesInterface $mimeTypeGuesser,
-        private ValidatorInterface $validator
+        private ValidatorInterface $validator,
     ) {
     }
 
@@ -34,11 +35,7 @@ class ImageManager
 
         $types = array_map(fn($type) => str_replace('image/', '', $type), self::IMAGE_MIMETYPES);
 
-        if (in_array($urlExt, $types)) {
-            return true;
-        }
-
-        return false;
+        return in_array($urlExt, $types);
     }
 
     public function store(string $source, string $filePath): bool
@@ -116,7 +113,9 @@ class ImageManager
 
             $this->validate($tempFile);
         } catch (Exception $e) {
-            fclose($fh);
+            if ($fh) {
+                fclose($fh);
+            }
             unlink($tempFile);
 
             return null;
@@ -127,14 +126,7 @@ class ImageManager
 
     public function getFilePath(string $file): string
     {
-        return sprintf('%s/%s/%s', $this->getRandomCharacters(), $this->getRandomCharacters(), $this->getFileName($file));
-    }
-
-    private function getRandomCharacters($length = 2): string
-    {
-        $chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-
-        return substr(str_shuffle($chars), 0, $length);
+        return sprintf('%s/%s/%s', substr($this->getFileName($file), 0, 2), substr($this->getFileName($file), 2, 2), $this->getFileName($file));
     }
 
     public function getFileName(string $file): string
@@ -155,7 +147,8 @@ class ImageManager
         return sprintf('%s.%s', $hash, $ext);
     }
 
-    public function remove(\App\Entity\Image $image)
+    public function remove(string $path):void
     {
+        $this->publicUploadsFilesystem->delete($path);
     }
 }

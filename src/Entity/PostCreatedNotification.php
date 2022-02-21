@@ -2,11 +2,10 @@
 
 namespace App\Entity;
 
-use App\Repository\PostCreatedNotificationRepository;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * @ORM\Entity(repositoryClass=PostCreatedNotificationRepository::class)
+ * @ORM\Entity()
  */
 class PostCreatedNotification extends Notification
 {

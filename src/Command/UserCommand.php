@@ -1,8 +1,8 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace App\Command;
 
-use App\DTO\RegisterUserDto;
+use App\DTO\UserDto;
 use App\Repository\UserRepository;
 use App\Service\UserManager;
 use Doctrine\ORM\EntityManagerInterface;
@@ -16,7 +16,6 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 class UserCommand extends Command
 {
     protected static $defaultName = 'kbin:user:create';
-    protected static string $defaultDescription = 'This command allows you to create or remove user account.';
 
     public function __construct(
         private EntityManagerInterface $entityManager,
@@ -29,7 +28,7 @@ class UserCommand extends Command
     protected function configure()
     {
         $this
-            ->setDescription(self::$defaultDescription)
+            ->setDescription('This command allows you to create or remove user account.')
             ->addArgument('username', InputArgument::REQUIRED)
             ->addArgument('email', InputArgument::REQUIRED)
             ->addArgument('password', InputArgument::REQUIRED)
@@ -65,14 +64,10 @@ class UserCommand extends Command
 
     private function createUser(InputInterface $input, SymfonyStyle $io): void
     {
-        $user = $this->manager->create(
-            (new RegisterUserDto())->create(
-                $input->getArgument('username'),
-                $input->getArgument('email'),
-                $input->getArgument('password'),
-            ),
-            false
-        );
+        $dto                = (new UserDto())->create($input->getArgument('username'), $input->getArgument('email'));
+        $dto->plainPassword = $input->getArgument('password');
+
+        $user = $this->manager->create($dto, false);
 
         $user->isVerified = true;
         $this->entityManager->flush();

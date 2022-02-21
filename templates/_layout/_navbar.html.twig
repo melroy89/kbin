@@ -1,112 +1,91 @@
-{% from '_layout/_macros.html.twig' import navbar_link %}
-
-<header class="kbin-header container-fluid mt-auto">
+<header class="kbin-header container-fluid mt-auto autohide position-relative">
     <nav class="kbin-nav navbar navbar-expand-lg navbar-light">
         <div class="kbin-container container">
-            <a class="kbin-nav-brand navbar-brand text-muted text-decoration-none kbin-logo" href="{{ app.user ? path('front_subscribed') : '/' }}">karab.in</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#kbin-nav"
-                    aria-controls="kbin-nav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse {{ kbin_js_enabled ? '' : 'show' }}" id="kbin-nav">
-                <ul class="kbin-nav-navbar navbar-nav me-auto mb-2 mb-lg-0">
-                    {% if is_magazine_page() %}
-                        <li class="text-muted me-3 pt-2">
-                            /m/<span class="font-weight-bold"><a class="text-decoration-none text-reset"
-                                                                 href="{{ path('front_magazine', {name: magazine.name}) }}">{{ magazine.name }}</a></span>
-                        </li>
-                    {% elseif is_user_page() %}
-                        <li class="text-muted me-3 pt-2">
-                            {% if user is not defined %}
-                                {% set user = app.user %}
-                            {% endif %}
-                            /u/<span class="font-weight-bold"><a class="text-decoration-none text-reset"
-                                                                 href="{{ path('user', {username: user.username}) }}">{{ user.username }}</a></span>
-                        </li>
-                    {% elseif is_sub_page() %}
-                        <li class="text-muted me-3 pt-2">
-                            /<span class="font-weight-bold">
-                                <a class="text-decoration-none text-reset" href="{{ path('front_subscribed') }}">sub</a>
-                            </span>
-                        </li>
-                    {% elseif is_mod_page() %}
-                        <li class="text-muted me-3 pt-2">
-                            /<span class="font-weight-bold">
-                                <a class="text-decoration-none text-reset" href="{{ path('front_moderated') }}">mod</a>
-                            </span>
-                        </li>
+            <a class="kbin-nav-brand navbar-brand text-muted text-decoration-none kbin-logo"
+               href="{{ app.user ? path(app.user.homepage) : '/' }}">{{ kbin_domain }}</a>
+            <div class="kbin-nav-navbar me-auto text-muted">
+                {% if is_magazine_page() %}
+                    <span class="text-muted me-auto text-small size">
+                    /m/<a class="text-decoration-none text-reset font-weight-bold"
+                          href="{{ path('front_magazine', {name: magazine.name}) }}">{{ magazine.name }}</a>
+                    </span>
+                {% elseif is_tag_page() %}
+                    <span class="text-muted me-auto text-small size">
+                    #<a class="text-decoration-none text-reset font-weight-bold"
+                        href="{{ path('tag_overall', {name: tag|trim('#')}) }}">{{ tag }}</a>
+                    </span>
+                {% elseif is_domain_page() %}
+                    <span class="text-muted me-auto text-small size">
+                    /d/<a class="text-decoration-none text-reset font-weight-bold"
+                          href="{{ path('domain_front', {name: domain.name}) }}">{{ domain.name }}</a>
+                    </span>
+                {% elseif is_user_page() %}
+                    {% if user is not defined %}
+                        {% set user = app.user %}
                     {% endif %}
-
+                    <span class="text-muted me-auto text-small size">
+                    /u/<a class="text-decoration-none text-reset font-weight-bold"
+                          href="{{ path('user', {username: user.username}) }}">{{ user.username }}</a>
+                    </span>
+                {% elseif is_sub_page() %}
+                    <span class="text-muted me-auto text-small size">
+                    /<a class="text-decoration-none text-reset font-weight-bold"
+                          href="{{ path('front_subscribed') }}">sub</a>
+                    </span>
+                {% elseif is_mod_page() %}
+                    <span class="text-muted me-auto text-small size">
+                    /<a class="text-decoration-none text-reset font-weight-bold"
+                        href="{{ path('front_moderated') }}">mod</a>
+                    </span>
+                {% endif %}
+            </div>
+            <button class="navbar-toggler me-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#kbin-nav"
+                    aria-controls="kbin-nav" aria-expanded="false" aria-label="Toggle filters">
+              <i class="fas fa-sort-amount-down p-1"></i>
+            </button>
+            <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#kbin-sidebar"
+                    aria-controls="kbin-nav" aria-expanded="false" aria-label="Toggle sidebar">
+                <i class="fas fa-bars p-1"></i>
+            </button>
+            <div class="ms-3 mb-0 {{ kbin_js_enabled ? '' : 'show' }} offcanvas offcanvas-end" id="kbin-nav">
+                <button type="button" class="navbar-toggler btn-close my-4 ms-1" data-bs-toggle="offcanvas" data-bs-target="#kbin-nav"
+                        aria-controls="kbin-nav" aria-expanded="false" aria-label="Toggle filters"></button>
+                <ul class="kbin-nav-navbar navbar-nav me-lg-auto mb-2 mb-lg-0">
                     {% if is_user_page() %}
-                        <li class=" kbin-nav-navbar-item {{ is_active_route('user') ? 'kbin-nav-navbar-item--active' : '' }}">
-                            <a href="{{ path('user', {username: user.username}) }}">Przegląd</a>
-                        </li>
-                        <li class=" kbin-nav-navbar-item {{ is_active_route('user_entries') ? 'kbin-nav-navbar-item--active' : '' }}">
-                            <a href="{{ path('user_entries', {username: user.username}) }}">Treści</a>
-                        </li>
-                        <li class=" kbin-nav-navbar-item {{ is_active_route('user_entry_comments') ? 'kbin-nav-navbar-item--active' : '' }}">
-                            <a href="{{ path('user_entry_comments', {username: user.username}) }}">Komentarze</a>
-                        </li>
-                        <li class=" kbin-nav-navbar-item {{ is_active_route('user_posts') ? 'kbin-nav-navbar-item--active' : '' }}">
-                            <a href="{{ path('user_posts', {username: user.username}) }}">Wpisy</a>
-                        </li>
-                        <li class=" kbin-nav-navbar-item {{ is_active_route('user_replies') ? 'kbin-nav-navbar-item--active' : '' }}">
-                            <a href="{{ path('user_replies', {username: user.username}) }}">Odpowiedzi</a>
-                        </li>
-                        <li class=" kbin-nav-navbar-item {{ is_active_route('user_replies') ? 'kbin-nav-navbar-item--active' : '' }}">
-                            <a href="{{ path('user_subscriptions', {username: user.username}) }}">Subskrypcje</a>
-                        </li>
-                        <li class=" kbin-nav-navbar-item {{ is_active_route('user_follow') ? 'kbin-nav-navbar-item--active' : '' }}">
-                            <a href="{{ path('user_follows', {username: user.username}) }}">Obserwowani</a>
-                        </li>
-                        <li class=" kbin-nav-navbar-item {{ is_active_route('user_followers') ? 'kbin-nav-navbar-item--active' : '' }}">
-                            <a href="{{ path('user_followers', {username: user.username}) }}">Obserwujący</a>
-                        </li>
+                        {% include '_layout/navbar/_user.html.twig' %}
+                    {% elseif is_tag_page() %}
+                        {% include '_layout/navbar/_tag.html.twig' %}
+                    {% elseif is_domain_page() %}
+                        {% include '_layout/navbar/_domain.html.twig' %}
                     {% else %}
-                        {{ navbar_link('Ważne', {
-                            sortBy: 'wazne',
-                        }) }}
-                        {{ navbar_link('Wschodzące', {
-                            sortBy: 'wschodzace',
-                        }) }}
-                        {{ navbar_link('Aktywne', {
-                            sortBy: 'aktywne',
-                        }) }}
-                        {{ navbar_link('Najnowsze', {
-                            sortBy: 'najnowsze',
-                        }) }}
-                        {{ navbar_link('Komentowane', {
-                            sortBy: 'komentowane',
-                        }) }}
-
-                        <li class="kbin-nav-navbar-item {{ is_comments_page() and not is_user_page() ? 'kbin-nav-navbar-item--active' : '' }}">
-                            <a href="{{ get_active_comments_page_path() }}">Komentarze</a>
-                        </li>
-
-                        <li class="kbin-nav-navbar-item {{ is_posts_page() and not is_user_page() ? 'kbin-nav-navbar-item--active' : '' }}">
-                            <a href="{{ get_active_posts_page_path() }}">Wpisy</a>
-                        </li>
+                        {% include '_layout/navbar/_front.html.twig' %}
                     {% endif %}
                 </ul>
-
-                <ul class="kbin-nav-navbar navbar-nav  mb-2 mb-lg-0 float-lg-end">
-                    {% if app.user and app.user.countNewNotifications > 0 %}
-                        <li class="kbin-nav-navbar-item">
+                <ul class="kbin-nav-navbar navbar-nav mb-2 mb-lg-0 float-lg-end"
+                    data-controller="notify"
+                    {% if magazine is defined and magazine %}data-notify-magazine-name-value="{{ magazine.name }}"{% endif %}
+                        {% if app.user %}data-notify-username-value="{{ app.user.username }}"{% endif %}
+                        {% if entry is defined and entry %}data-notify-entry-id-value="{{ entry.id }}"{% endif %}>
+                    {% if app.user %}
+                        <li class="kbin-nav-navbar-item {{ app.user.countNewNotifications > 0 ? '' : 'visually-hidden' }}"
+                            data-notify-counter-target="notifications">
                             <a href="{{ path('user_profile_notifications') }}" class="px-1">
                                 <span class="badge rounded-pill bg-primary">{{ app.user.countNewNotifications }}</span>
                             </a>
                         </li>
                     {% endif %}
-                    {% if app.user and app.user.countNewMessages > 0 %}
-                        <li class="kbin-nav-navbar-item">
+                    {% if app.user %}
+                        <li class="kbin-nav-navbar-item {{ app.user.countNewMessages > 0 ? '' : 'visually-hidden' }}"
+                            data-notify-counter-target="messages">
                             <a href="{{ path('user_profile_messages') }}" class="px-1">
                                 <span class="badge rounded-pill bg-danger">{{ app.user.countNewMessages }}</span>
                             </a>
                         </li>
                     {% endif %}
                     <li class="kbin-nav-navbar-item kbn-login-btn {{ is_user_profile_page() ? 'kbin-nav-navbar-item--active' : '' }}">
-                        <a href="{{ path('user_profile_front') }}" class="px-1"><i
-                                    class="fas fa-user"></i> {{ is_granted('ROLE_USER') ? 'Profil' : 'Zaloguj się' }}</a>
+                        <a href="{{ path('user_profile_front') }}" class="px-1">
+                            <i class="fas fa-user"></i> {{ is_granted('ROLE_USER') ? 'profile'|trans : 'login'|trans }}
+                        </a>
                     </li>
                 </ul>
             </div>

@@ -2,11 +2,15 @@
 
 namespace App\DTO;
 
+use App\Entity\Domain;
 use App\Entity\Entry;
 use App\Entity\Image;
 use App\Entity\Magazine;
 use App\Entity\User;
+use DateTime;
+use DateTimeImmutable;
 use Doctrine\Common\Collections\Collection;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
@@ -16,58 +20,47 @@ class EntryDto
     public Magazine|MagazineDto|null $magazine = null;
     public User|UserDto|null $user = null;
     public Image|ImageDto|null $image = null;
+    public Domain|DomainDto|null $domain = null;
     #[Assert\NotBlank]
     #[Assert\Length(min: 2, max: 255)]
-    public string $title;
+    public ?string $title = null;
     #[Assert\Url]
     public ?string $url = null;
-    #[Assert\Length(min: 2, max: 15000)]
+    #[Assert\Length(min: 2, max: 35000)]
     public ?string $body = null;
-    public ?int $comments = null;
-    public ?int $uv = null;
-    public ?int $dv = null;
-    public ?bool $isAdult = false;
+    public ?string $lang = null;
+    public int $comments = 0;
+    public int $uv = 0;
+    public int $dv = 0;
+    public bool $isOc = false;
+    public bool $isAdult = false;
     public ?Collection $badges = null;
+    public ?string $slug = null;
+    public int $views = 0;
+    public int $score = 0;
+    public ?string $visibility = null;
+    public ?string $ip = null;
+    public ?array $tags = null;
+    public ?DateTimeImmutable $createdAt = null;
+    public ?DateTime $lastActive = null;
     private ?int $id = null;
-
-    public function create(
-        Magazine $magazine,
-        User $user,
-        string $title,
-        ?string $url = null,
-        ?string $body = null,
-        ?int $comments = null,
-        ?int $uv = null,
-        ?int $dv = null,
-        ?Image $image = null,
-        ?bool $isAdult = false,
-        ?Collection $badges = null,
-        ?int $id = null
-    ): self {
-        $this->id       = $id;
-        $this->magazine = $magazine;
-        $this->user     = $user;
-        $this->title    = $title;
-        $this->url      = $url;
-        $this->body     = $body;
-        $this->comments = $comments;
-        $this->uv       = $uv;
-        $this->dv       = $dv;
-        $this->image    = $image;
-        $this->isAdult  = $isAdult;
-        $this->badges   = $badges;
-
-        return $this;
-    }
 
     #[Assert\Callback]
     public function validate(
         ExecutionContextInterface $context,
         $payload
     ) {
-        if (null === $this->body && null === $this->url) {
+        $image = Request::createFromGlobals()->files->filter('entry_image');
+        if (is_array($image)) {
+            $image = $image['image'];
+        } else {
+            $image = $context->getValue()->image;
+        }
+
+        if (null === $this->body && null === $this->url && null === $image) {
             $this->buildViolation($context, 'url');
             $this->buildViolation($context, 'body');
+            $this->buildViolation($context, 'image');
         }
     }
 
@@ -83,12 +76,33 @@ class EntryDto
         return $this->id;
     }
 
+    public function setId(int $id): void
+    {
+        $this->id = $id;
+    }
+
     public function getType(): string
     {
-        if ($this->body) {
-            return Entry::ENTRY_TYPE_ARTICLE;
+        if ($this->url) {
+            return Entry::ENTRY_TYPE_LINK;
         }
 
-        return Entry::ENTRY_TYPE_LINK;
+        $type = Entry::ENTRY_TYPE_IMAGE;
+
+        if ($this->body) {
+            $type = Entry::ENTRY_TYPE_ARTICLE;
+        }
+
+        return $type;
+    }
+
+    public function setIsEng(string $lang)
+    {
+        $this->lang = $lang ? 'en' : null;
+    }
+
+    public function isEng(): bool
+    {
+        return (bool) $this->lang;
     }
 }

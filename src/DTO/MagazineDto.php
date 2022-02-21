@@ -1,7 +1,9 @@
-<?php declare(strict_types=1);
+<?php declare(strict_types = 1);
 
 namespace App\DTO;
 
+use App\Entity\Image;
+use App\Entity\User;
 use App\Validator\Unique;
 use Doctrine\Common\Collections\Collection;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -11,43 +13,36 @@ use Symfony\Component\Validator\Constraints as Assert;
  */
 class MagazineDto
 {
+    public User|UserDto|null $user = null;
+    public Image|ImageDto|null $cover = null;
     #[Assert\NotBlank]
     #[Assert\Length(min: 2, max: 25)]
     #[Assert\Regex(pattern: "/^[a-zA-Z0-9_]{2,25}$/", match: true)]
-    public string $name;
+    public ?string $name = null;
     #[Assert\NotBlank]
     #[Assert\Length(min: 3, max: 50)]
-    public string $title;
+    public ?string $title = null;
     #[Assert\Length(min: 3, max: 420)]
     public ?string $description = null;
     #[Assert\Length(min: 3, max: 420)]
     public ?string $rules = null;
-    public ?bool $isAdult = false;
-    public Collection $badges;
+    public int $subscriptionsCount = 0;
+    public int $entryCount = 0;
+    public int $entryCommentCount = 0;
+    public int $postCount = 0;
+    public int $postCommentCount = 0;
+    public bool $isAdult = false;
+    public ?Collection $badges = null;
+    public ?string $ip = null;
     private ?int $id = null;
-
-    public function create(
-        string $name,
-        string $title,
-        Collection $badges,
-        ?string $description = null,
-        ?string $rules = null,
-        ?bool $isAdult = false,
-        ?int $id = null
-    ): self {
-        $this->id          = $id;
-        $this->name        = $name;
-        $this->title       = $title;
-        $this->badges      = $badges;
-        $this->description = $description;
-        $this->rules       = $rules;
-        $this->isAdult     = $isAdult;
-
-        return $this;
-    }
 
     public function getId(): ?int
     {
         return $this->id;
+    }
+
+    public function setId(int $id): void
+    {
+        $this->id = $id;
     }
 }

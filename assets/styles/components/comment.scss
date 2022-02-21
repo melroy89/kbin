@@ -8,16 +8,13 @@ $comment-margin-sm: .5rem;
     margin: 0;
   }
 
-  &-header {
-    border-bottom: 1px solid $kbin-comment-list-item-border-color;
-  }
-
   .kbin-comment {
     font-size: .9rem;
     padding: .6rem .3rem;
     display: flow-root;
     position: relative;
     background: white;
+    overflow: hidden;
 
     a {
       &:hover {
@@ -146,6 +143,7 @@ $comment-margin-sm: .5rem;
         color: grey;
         margin: 0 .5rem 0 0;
         text-decoration: none;
+        vertical-align: revert;
       }
 
       &-list {
@@ -170,6 +168,11 @@ $comment-margin-sm: .5rem;
       display: block;
       word-break: break-word;
       overflow: hidden;
+
+      blockquote {
+        color: green;
+        padding-left: 20px;
+      }
 
       img {
         max-width: 100%;

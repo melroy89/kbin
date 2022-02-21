@@ -1,4 +1,4 @@
-<?php declare(strict_types=1);
+<?php declare(strict_types = 1);
 
 namespace App\Entity;
 
@@ -14,9 +14,9 @@ class EntryReport extends Report
      */
     public ?Entry $entry;
 
-    public function __construct(User $reporting, User $reported, Entry $entry, ?string $reason = null)
+    public function __construct(User $reporting, Entry $entry, ?string $reason = null)
     {
-        parent::__construct($reporting, $reported, $entry->magazine, $reason);
+        parent::__construct($reporting, $entry->user, $entry->magazine, $reason);
 
         $this->entry = $entry;
     }

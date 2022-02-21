@@ -1,6 +1,8 @@
-<?php declare(strict_types=1);
+<?php declare(strict_types = 1);
 
 namespace App\Utils;
+
+use App\Exception\BadUrlException;
 
 class UrlCleaner
 {
@@ -93,6 +95,7 @@ class UrlCleaner
         '#?utm_campaign',
         '#?utm_content',
         '#?utm_int',
+        'fbclid',
     ];
 
     public function __invoke(string $url): string
@@ -111,6 +114,16 @@ class UrlCleaner
         unset($qsVars[$var]);
         $newQs = http_build_query($qsVars);
 
-        return $urlPart.'?'.$newQs;
+        return $this->validate(trim($urlPart.'?'.$newQs, '?'));
+    }
+
+    private function validate(string $url): string
+    {
+        // @todo checkdnsrr?
+        if (!filter_var($url, FILTER_VALIDATE_URL)) {
+            throw new BadUrlException($url);
+        }
+
+        return $url;
     }
 }

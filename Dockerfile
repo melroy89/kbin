@@ -6,6 +6,7 @@
 # https://docs.docker.com/engine/reference/builder/#understand-how-arg-and-from-interact
 ARG PHP_VERSION=8.0
 ARG CADDY_VERSION=2
+ARG ELASTIC_VERSION=7.4.0
 
 # "php" stage
 FROM php:${PHP_VERSION}-fpm-alpine AS symfony_php
@@ -21,20 +22,27 @@ RUN apk add --no-cache \
 		jq \
         freetype-dev \
         libjpeg-turbo-dev \
+        libwebp-dev \
         libpng-dev \
+        libjpeg-turbo-dev \
+        libpng-dev \
+        php-sysvsem \
+        apk-cron \
 	;
 
 # install gnu-libiconv and set LD_PRELOAD env to make iconv work fully on Alpine image.
 # see https://github.com/docker-library/php/issues/240#issuecomment-763112749
 ENV LD_PRELOAD /usr/lib/preloadable_libiconv.so
 
-ARG APCU_VERSION=5.1.19
+ARG APCU_VERSION=5.1.21
 RUN set -eux; \
 	apk add --no-cache --virtual .build-deps \
 		$PHPIZE_DEPS \
 		icu-dev \
 		libzip-dev \
 		zlib-dev \
+		imagemagick \
+		imagemagick-dev \
 	; \
 	\
 	docker-php-ext-configure zip; \
@@ -42,18 +50,23 @@ RUN set -eux; \
 		intl \
 		zip \
 	; \
-    docker-php-ext-configure gd --with-freetype=/usr/include/ --with-jpeg=/usr/include/; \
+    docker-php-ext-configure gd --with-freetype=/usr/include/ --with-webp=/usr/include/ --with-jpeg=/usr/include/; \
 	docker-php-ext-install -j$(nproc) gd; \
+    docker-php-ext-configure sysvsem; \
+	docker-php-ext-install -j$(nproc) sysvsem; \
 	pecl install \
 		apcu-${APCU_VERSION} \
+		imagick \
 	; \
-    pecl install \
-        mongodb \
-    ; \
+#    pecl install \
+#        mongodb \
+#    ; \
 	pecl clear-cache; \
 	docker-php-ext-enable \
 		apcu \
 		opcache \
+		sysvsem \
+		imagick \
 	; \
 	\
 	runDeps="$( \
@@ -73,7 +86,7 @@ HEALTHCHECK --interval=10s --timeout=3s --retries=3 CMD ["docker-healthcheck"]
 
 RUN ln -s $PHP_INI_DIR/php.ini-production $PHP_INI_DIR/php.ini
 COPY docker/php/conf.d/symfony.prod.ini $PHP_INI_DIR/conf.d/symfony.ini
-RUN echo "extension=mongodb.so" > $PHP_INI_DIR/conf.d/mongodb.ini
+#RUN echo "extension=mongodb.so" > $PHP_INI_DIR/conf.d/mongodb.ini
 
 COPY docker/php/php-fpm.d/zz-docker.conf /usr/local/etc/php-fpm.d/zz-docker.conf
 
@@ -91,12 +104,17 @@ ENV PATH="${PATH}:/root/.composer/vendor/bin"
 
 WORKDIR /srv/app
 
+# Allow to choose skeleton
+ARG SKELETON="symfony/skeleton"
+ENV SKELETON ${SKELETON}
+
 # Allow to use development versions of Symfony
 ARG STABILITY="stable"
-ENV STABILITY ${STABILITY:-stable}
+ENV STABILITY ${STABILITY}
 
 # Allow to select skeleton version
 ARG SYMFONY_VERSION=""
+ENV SYMFONY_VERSION ${SYMFONY_VERSION}
 
 # Download the Symfony skeleton and leverage Docker cache layers
 RUN composer create-project "symfony/skeleton ${SYMFONY_VERSION}" . --stability=$STABILITY --prefer-dist --no-dev --no-progress --no-interaction; \
@@ -118,7 +136,8 @@ RUN set -eux; \
 	composer install --prefer-dist --no-dev --no-progress --no-scripts --no-interaction; \
 	composer dump-autoload --classmap-authoritative --no-dev; \
 	composer symfony:dump-env prod; \
-	composer run-script --no-dev post-install-cmd; \
+#   @todo important: building bug 224a94dac9e166867c62db6b6145d23ff1393432
+#	composer run-script --no-dev post-install-cmd; \
 	chmod +x bin/console; sync
 VOLUME /srv/app/var
 
@@ -129,9 +148,9 @@ FROM caddy:${CADDY_VERSION}-builder-alpine AS symfony_caddy_builder
 
 RUN xcaddy build \
 	--with github.com/dunglas/mercure \
-	--with github.com/dunglas/mercure/caddy
-    #--with github.com/dunglas/vulcain \
-    #--with github.com/dunglas/vulcain/caddy
+	--with github.com/dunglas/mercure/caddy \
+	--with github.com/dunglas/vulcain \
+	--with github.com/dunglas/vulcain/caddy
 
 FROM caddy:${CADDY_VERSION} AS symfony_caddy
 
@@ -144,10 +163,12 @@ COPY docker/caddy/Caddyfile /etc/caddy/Caddyfile
 
 #FROM symfony_php as symfony_php_debug
 #
-#ARG XDEBUG_VERSION=3.0.1
+#ARG XDEBUG_VERSION=3.0.4
 #RUN set -eux; \
 #	apk add --no-cache --virtual .build-deps $PHPIZE_DEPS; \
 #	pecl install xdebug-$XDEBUG_VERSION; \
 #	docker-php-ext-enable xdebug; \
 #	apk del .build-deps
 
+FROM docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION} as symfony_elastic
+RUN bin/elasticsearch-plugin install pl.allegro.tech.elasticsearch.plugin:elasticsearch-analysis-morfologik:7.4.0

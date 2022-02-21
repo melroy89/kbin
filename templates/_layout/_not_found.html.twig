@@ -6,38 +6,54 @@
     {%- endwith -%}
 {%- endmacro -%}
 
-{% block not_found %}
-    {# {{ block('icon_'~type) }} #}
-    {{ block('icon') }}
-{% endblock %}
+{%- macro not_found_transactions(type, options) -%}
+    {%- with {
+        type: type,
+        } only -%}
+        {{ block('not_found_transactions') }}
+    {%- endwith -%}
+{%- endmacro -%}
 
-{% block icon %}
+{% block not_found_transactions %}
     <div class="text-center py-5 text-muted">
-        <span class="display-1">
-                {{ random([
-                    'ฅ^•ﻌ•^ฅ',
-                    'q(❂‿❂)p',
-                    '☜(⌒▽⌒)☞',
-                    '(｡◕‿◕｡)',
-                    '(づ◔ ͜ʖ◔)づ',
-                    'ԅ(≖‿≖ԅ)',
-                    '\(ᵔᵕᵔ)/',
-                    '¯\_(ツ)_/¯',
-                    '(⩾﹏⩽)',
-                    'ಠ_ಠ',
-                    '¯\(°_o)/¯',
-                    'ಥ_ಥ',
-                    'ಥ﹏ಥ',
-                    '(҂◡_◡)',
-                    '(ーー゛)'
-                ]) }}
-        </span>
-        <p class="fs-3 mt-2">
-            {{ random([
-                'pusto...',
-                'nic tu nie ma...',
-                'nic tu się nie dzieje...',
-            ]) }}
+        <p class="display-4">
+            {{ 'no_transactions'|trans }}
         </p>
     </div>
-{% endblock icon %}
+{% endblock %}
+
+{% block not_found %}
+    {% if is_entry_page() or is_post_page() %}
+        <div class="text-center py-5 text-muted">
+            <p class="display-4">
+                {{ 'no_comments'|trans }}
+            </p>
+        </div>
+    {% elseif(is_sub_page()) %}
+        <div class="text-center py-5 text-muted">
+            <p class="display-4">
+                {{ 'no_threads'|trans }}
+            </p>
+        </div>
+
+        {{ component('popular_magazines') }}
+    {% elseif (is_magazine_page() or is_homepage()) and not is_magazine_panel_page() %}
+        <div class="text-center py-5 text-muted">
+            <p class="display-4">
+                {{ 'no_threads'|trans }}
+            </p>
+            <p class="fs-5 mt-2">
+                {{ 'add_new_link_or_article'|trans({
+                    '%link1_start%' : '<a class="fw-bolder" href="'~path('entry_create', { type: 'type.link'|trans })~'">',
+                    '%link2_start%' : '<a class="fw-bolder" href="'~path('entry_create', { type: 'type.article'|trans })~'">',
+                    '%link_end%' : '</a>'}) | raw }}
+            </p>
+        </div>
+    {% else %}
+        <div class="text-center py-5 text-muted">
+            <p class="display-4">
+                {{ 'nothing_here'|trans }}
+            </p>
+        </div>
+    {% endif %}
+{% endblock %}

@@ -1,5 +1,20 @@
 .kbin-entry {
-  padding: 1rem .3rem;
+  @include media-breakpoint-down(sm) {
+    margin-left: -.8rem;
+    margin-right: -.8rem;
+    padding-left: .8rem;
+    padding-right: .8rem;
+  }
+
+  .kbin-related-wrapper & {
+    opacity: 0.7;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  padding: 2rem .3rem;
   display: flow-root;
   position: relative;
 
@@ -7,6 +22,7 @@
     border-top: 1px solid $kbin-entry-list-item-border-color;
     border-bottom: 1px solid $kbin-entry-list-item-border-color;
     background-color: $kbin-entry-list-item-nth-background-color;
+    overflow: hidden;
 
     .kbin-dark & {
       border-top: 1px solid $kbin-dark-entry-list-item-border-color;
@@ -19,8 +35,10 @@
     display: flow-root;
 
     @include media-breakpoint-down(sm) {
-      clear: both;
-      padding-top: 1rem;
+      .kbin-has-image & {
+        clear: both;
+        padding-top: 1rem;
+      }
     }
   }
 
@@ -58,8 +76,6 @@
   }
 
   &-image {
-    float: left;
-    margin-right: .6rem;
     margin-bottom: 0;
     padding-top: .2rem;
     display: table-cell;
@@ -67,6 +83,12 @@
 
     img {
       max-width: 7rem;
+    }
+
+    @include media-breakpoint-down(sm) {
+      img {
+        max-width: 7rem;
+      }
     }
   }
 
@@ -101,8 +123,9 @@
       font-size: .75rem;
       font-weight: bold;
       color: gray;
-      margin: 0 .5rem 0 0;
       text-decoration: none;
+      margin: 0 .5rem 0 0;
+      vertical-align: revert;
 
       .kbin-dark & {
         color: gray;
@@ -133,6 +156,20 @@
             font-weight: bold;
             color: gray;
             margin-right: .5rem;
+
+            .ada {
+              fill: gray !important;
+
+              width: .6rem;
+
+              &:hover {
+                fill: black !important;
+
+                .kbin-dark & {
+                  fill: $white !important;
+                }
+              }
+            }
           }
         }
       }
@@ -146,11 +183,18 @@
 
     img {
       max-width: 35rem;
-      height: 25rem;
+      max-height: 25rem;
 
       @include media-breakpoint-down(lg) {
         max-width: 100%;
       }
+    }
+  }
+
+  @include media-breakpoint-down(sm) {
+    .kbin-no-image {
+      clear: both;
+      padding-top: 1rem;
     }
   }
 }
@@ -163,7 +207,11 @@
 }
 
 .kbin-embed {
-  overflow: scroll;
+  //overflow: scroll;
+
+  img {
+    max-width: 100%;
+  }
 
   .ratio > * {
     position: absolute !important;

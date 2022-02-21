@@ -1,9 +1,9 @@
-<?php declare(strict_types=1);
+<?php declare(strict_types = 1);
 
 namespace App\EventSubscriber\PostComment;
 
 use App\Event\PostComment\PostCommentCreatedEvent;
-use App\Message\PostCommentCreatedNotificationMessage;
+use App\Message\Notification\PostCommentCreatedNotificationMessage;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\Messenger\MessageBusInterface;
 

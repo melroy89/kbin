@@ -1,7 +1,10 @@
 {% extends 'base.html.twig' %}
+
+{% use 'user/profile/_notifications.html.twig' %}
+
 {% from '_layout/_not_found.html.twig' import not_found %}
 
-{% block title %}Notyfikacje | {{ parent() }}{% endblock %}
+{% block title %}{{ 'notifications'|trans }}{% endblock %}
 
 {% block body %}
     <div class="kbin-profile kbin-profile-notifications-page">
@@ -13,34 +16,32 @@
                     <form action="{{ path('user_profile_notifications_read') }}" method="POST" class="me-2">
                         <input type="hidden" name="token" value="{{ csrf_token('read_notifications') }}">
                         <button class="btn btn-sm btn-primary" type="submit">
-                            Odczytaj wszystkie
+                            {{ 'read_all'|trans }}
                         </button>
                     </form>
-                    <form action="{{ path('user_profile_notifications_clear') }}" method="POST">
+                    <form method="post" action="{{ path('user_profile_notifications_clear') }}"
+                          onsubmit="return confirm('{{ 'are_you_sure'|trans }}');">
                         <input type="hidden" name="token" value="{{ csrf_token('clear_notifications') }}">
                         <button class="btn btn-sm btn-danger" type="submit">
-                            <span>Wyczyść</span>
+                            <span>{{ 'purge'|trans }}</span>
                         </button>
                     </form>
                 </div>
             {% else %}
                 {{ not_found() }}
             {% endif %}
-            <div class="table-responsive">
+            <div class="kbin-notifications table-responsive">
                 <table class="table align-middle small">
                     <tbody>
                     {% for notification in notifications %}
-                        <tr>
-                            <td class="{{ notification.status is same as 'new' ? '' : 'opacity-50' }}">{{ block(notification.type) }}</td>
-                            <td class="text-end text-"><small class="text-muted">{{ notification.createdAt|ago }}</small></td>
-                        </tr>
+                        <div class="{{ notification.status is same as 'new' ? '' : 'opacity-50' }}">{{ block(notification.type) }}</div>
                     {% endfor %}
                     </tbody>
                 </table>
             </div>
 
             {% if(notifications.haveToPaginate) %}
-                {{ pagerfanta(notifications, null, {'pageParameter':'[strona]'}) }}
+                {{ pagerfanta(notifications, null, {'pageParameter':'[p]'}) }}
             {% endif %}
         </div>
     </div>
@@ -51,46 +52,6 @@
     {% include 'user/profile/_sidebar.html.twig' %}
     {{ parent() }}
     <div class="mb-4">
-        {% include 'user/_moderator_list_card.html.twig'with {user: app.user} %}
+        {% include 'user/_moderator_list_card.html.twig' with {user: app.user} %}
     </div>
 {% endblock %}
-
-{% block entry_created_notification %}
-    {% include 'user/profile/notification/_entry_created_notification.html.twig' %}
-{% endblock entry_created_notification %}
-
-{% block entry_deleted_notification %}
-    {% include 'user/profile/notification/_entry_deleted_notification.html.twig' %}
-{% endblock entry_deleted_notification %}
-
-{% block entry_comment_created_notification %}
-    {% include 'user/profile/notification/_entry_comment_created_notification.html.twig' %}
-{% endblock entry_comment_created_notification %}
-
-{% block entry_comment_deleted_notification %}
-    {% include 'user/profile/notification/_entry_comment_deleted_notification.html.twig' %}
-{% endblock entry_comment_deleted_notification %}
-
-{% block post_created_notification %}
-    {% include 'user/profile/notification/_post_created_notification.html.twig' %}
-{% endblock post_created_notification %}
-
-{% block post_deleted_notification %}
-    {% include 'user/profile/notification/_post_deleted_notification.html.twig' %}
-{% endblock post_deleted_notification %}
-
-{% block post_comment_created_notification %}
-    {% include 'user/profile/notification/_post_comment_created_notification.html.twig' %}
-{% endblock post_comment_created_notification %}
-
-{% block post_comment_deleted_notification %}
-    {% include 'user/profile/notification/_post_comment_deleted_notification.html.twig' %}
-{% endblock post_comment_deleted_notification %}
-
-{% block message_notification %}
-    {% include 'user/profile/notification/_message_notification.html.twig' %}
-{% endblock message_notification %}
-
-{% block magazine_ban_notification %}
-    {% include 'user/profile/notification/_ban_notification.html.twig' %}
-{% endblock magazine_ban_notification %}

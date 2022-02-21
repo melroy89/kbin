@@ -1,34 +1,32 @@
-import {Controller} from 'stimulus';
+import {Controller} from '@hotwired/stimulus';
 import {fetch, ok} from "../utils/http";
 import Cookies from 'js-cookie';
 
 export default class extends Controller {
-    connect() {
-        if (Cookies.get('dark')) {
-            this.element.classList.add('kbin-dark');
-        }
-    }
-
     async toggleTheme(e) {
         e.preventDefault();
 
-        try {
-            let response = await fetch(e.target.href, {method: 'POST'});
+        if (window.KBIN_LOGGED_IN) {
+            try {
+                let response = await fetch(e.target.href, {method: 'POST'});
 
-            response = await ok(response);
-            response = await response.json();
+                response = await ok(response);
+                response = await response.json();
 
-            Cookies.remove('dark');
-            this.element.classList.toggle('kbin-dark');
-        } catch (e) {
-            this.element.classList.toggle('kbin-dark');
-            if (Cookies.get('dark')) {
-                Cookies.remove('dark');
-            } else {
-                alert("Zaloguj się, aby uniknąć efektu migania.")
-                Cookies.set('dark', true);
+                document.body.classList.toggle('kbin-dark');
+            } catch (e) {
+                document.body.classList.toggle('kbin-dark');
+            } finally {
             }
-        } finally {
+        } else {
+            if (!Cookies.get('theme')) {
+                document.body.classList.add('kbin-dark');
+                Cookies.set('theme', 'kbin-dark');
+                return true;
+            }
+
+            Cookies.set('theme', document.body.classList.contains('kbin-dark') ? 'kbin-light' : 'kbin-dark');
+            document.body.classList.toggle('kbin-dark');
         }
     }
 }

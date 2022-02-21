@@ -1,25 +1,26 @@
 {% extends 'base.html.twig' %}
-{% from 'entry/_macros.html.twig' import entry %}
 
-{% block title %}{{ entry.title }} | /m/{{ magazine.name }} | {{ parent() }}{% endblock %}
+{% block title %}{{ entry.title }} - {{ magazine.title }}{% endblock %}
+{% block description %}{{ entry.body ? get_short_desc(entry.body) : get_author_entry_comment(entry) ? get_short_desc(get_author_entry_comment(entry).body) : '' }}{% endblock %}
+{% block image %}{{ entry.image ? uploaded_asset(entry.image.filePath) : magazine.cover ? uploaded_asset(magazine.cover.filePath) : '' }}{% endblock %}
 
-    {% block body %}
+{% block body %}
+    {% if entry.isAdult and (not app.user or app.user.hideAdult) %}
+        {% include '_layout/_adult.html.twig' %}
+    {% else %}
+        {% include '_layout/_flash.html.twig' %}
         <div class="kbin-entry-page">
-
             {% block entry %}
-                {{ entry(entry, {
-                    extra_classes: 'kbin-entry-single',
-                    show_content: true,
-                }) }}
+                {{ component('entry', {entry: entry, extraClass: 'kbin-entry-single', showContent: true, directUrl: true, showMagazine: magazine is not defined}) }}
             {% endblock %}
 
             {% block after_entry %}{% endblock %}
 
             {% block comments %}
                 <section class="kbin-comment-wrapper mt-4">
-                    <h4 class="kbin-comment-wrapper-header pb-3 mb-0 font-weight-light">Komentarze</h4>
+                    <h4 class="kbin-comment-header pb-3 mb-0 font-weight-light">{{ 'comments'|trans }}</h4>
 
-                    <div class="mt-2">
+                    <div class="mb-3">
                         {% include 'entry/comment/_filters.html.twig' %}
                     </div>
 
@@ -28,23 +29,25 @@
                     {% include 'entry/comment/_list.html.twig' %}
 
                     {% if is_granted('comment', entry) %}
-                        {{ render(controller('App\\Controller\\Entry\\EntryCommentController::commentForm', {
-                            'magazineName': entry.magazine.name,
-                            'entryId': entry.id
-                        })) }}
+                        {{ component('entry_comment_form', {entry: entry}) }}
                     {% else %}
                         <div class="alert alert-secondary text-muted my-3" role="alert">
                             {% if not app.user %}
-                                <a href="{{ path('app_login') }}" class="font-weight-bold">Zaloguj się</a> aby dodać komentarz.
+                                {{ 'login_to_comment'|trans({'%link_start%' : '<a class="font-weight-bold" href="'~path('app_login')~'">', '%link_end%' : '</a>'}) | raw }}
                             {% else %}
-                                Nie możesz dodać komentarza.
+                                {{ 'cannot_add_comment'|trans }}
                             {% endif %}
                         </div>
                     {% endif %}
                 </section>
             {% endblock %}
+
+            {% block related %}
+                {{ component('related_entries', {entry: entry}) }}
+            {% endblock %}
         </div>
-    {% endblock %}
+    {% endif %}
+{% endblock %}
 
 {% block sidebar %}
     {% include 'entry/_sidebar.html.twig' %}

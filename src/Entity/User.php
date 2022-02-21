@@ -9,13 +9,15 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\Collections\Criteria;
 use Doctrine\ORM\Mapping as ORM;
 use DomainException;
+use Symfony\Component\Security\Core\User\EquatableInterface;
+use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 
 /**
  * @ORM\Entity(repositoryClass=UserRepository::class)
  * @ORM\Table(name="`user`")
  */
-class User implements UserInterface
+class User implements UserInterface, PasswordAuthenticatedUserInterface, EquatableInterface
 {
     use CreatedAtTrait {
         CreatedAtTrait::__construct as createdAtTraitConstruct;
@@ -24,6 +26,14 @@ class User implements UserInterface
     public const THEME_LIGHT = 'light';
     public const THEME_DARK = 'dark';
     public const THEME_AUTO = 'auto';
+
+    public const MODE_NORMAL = 'normal';
+    public const MODE_TURBO = 'turbo';
+
+    public const HOMEPAGE_ALL = 'front';
+    public const HOMEPAGE_SUB = 'front_subscribed';
+    public const HOMEPAGE_MOD = 'front_moderated';
+
     /**
      * @ORM\ManyToOne(targetEntity="Image", cascade={"persist"})
      */
@@ -49,13 +59,69 @@ class User implements UserInterface
      */
     public string $theme = self::THEME_LIGHT;
     /**
+     * @ORM\Column(type="string", options={"default": User::MODE_NORMAL})
+     */
+    public string $mode = self::MODE_NORMAL;
+    /**
+     * @ORM\Column(type="string", options={"default": User::HOMEPAGE_SUB})
+     */
+    public string $homepage = self::HOMEPAGE_SUB;
+    /**
+     * @ORM\Column(type="string", nullable=true, options={"default": null})
+     */
+    public ?string $cardanoWalletId = null;
+    /**
+     * @ORM\Column(type="string", nullable=true, options={"default": null})
+     */
+    public ?string $cardanoWalletAddress = null;
+    /**
+     * @ORM\Column(type="boolean", options={"default": false})
+     */
+    public bool $hideImages = false;
+    /**
+     * @ORM\Column(type="boolean", options={"default": true})
+     */
+    public bool $hideAdult = false;
+    /**
+     * @ORM\Column(type="boolean", options={"default": false})
+     */
+    public bool $rightPosImages = false;
+    /**
+     * @ORM\Column(type="boolean", options={"default": false})
+     */
+    public bool $showProfileSubscriptions = false;
+    /**
+     * @ORM\Column(type="boolean", options={"default": false})
+     */
+    public bool $showProfileFollowings = false;
+    /**
      * @ORM\Column(type="boolean")
      */
     public bool $notifyOnNewEntry = false;
     /**
      * @ORM\Column(type="boolean")
      */
+    public bool $notifyOnNewEntryReply = false;
+    /**
+     * @ORM\Column(type="boolean")
+     */
+    public bool $notifyOnNewEntryCommentReply = false;
+    /**
+     * @ORM\Column(type="boolean")
+     */
     public bool $notifyOnNewPost = false;
+    /**
+     * @ORM\Column(type="boolean")
+     */
+    public bool $notifyOnNewPostReply = false;
+    /**
+     * @ORM\Column(type="boolean")
+     */
+    public bool $notifyOnNewPostCommentReply = false;
+    /**
+     * @ORM\Column(type="boolean", options={"default": false})
+     */
+    public bool $isBanned = false;
     /**
      * @ORM\Column(type="boolean")
      */
@@ -101,6 +167,10 @@ class User implements UserInterface
      */
     public Collection $subscriptions;
     /**
+     * @ORM\OneToMany(targetEntity=DomainSubscription::class, mappedBy="user", orphanRemoval=true)
+     */
+    public Collection $subscribedDomains;
+    /**
      * @ORM\OneToMany(targetEntity=UserFollow::class, mappedBy="follower", orphanRemoval=true, cascade={"persist", "remove"})
      */
     public Collection $follows;
@@ -121,10 +191,19 @@ class User implements UserInterface
      */
     public Collection $blockedMagazines;
     /**
+     * @ORM\OneToMany(targetEntity=DomainBlock::class, mappedBy="user", orphanRemoval=true, cascade={"persist", "remove"})
+     */
+    public Collection $blockedDomains;
+    /**
      * @ORM\OneToMany(targetEntity="Report", mappedBy="reporting", fetch="EXTRA_LAZY", cascade={"persist"})
      * @ORM\OrderBy({"id": "DESC"})
      */
     public Collection $reports;
+    /**
+     * @ORM\OneToMany(targetEntity="Favourite", mappedBy="user", fetch="EXTRA_LAZY", cascade={"persist"})
+     * @ORM\OrderBy({"id": "DESC"})
+     */
+    public Collection $favourites;
     /**
      * @ORM\OneToMany(targetEntity="Report", mappedBy="reported", fetch="EXTRA_LAZY", cascade={"persist"})
      * @ORM\OrderBy({"id": "DESC"})
@@ -162,12 +241,15 @@ class User implements UserInterface
         $this->postComments      = new ArrayCollection();
         $this->postCommentVotes  = new ArrayCollection();
         $this->subscriptions     = new ArrayCollection();
+        $this->subscribedDomains = new ArrayCollection();
         $this->follows           = new ArrayCollection();
         $this->followers         = new ArrayCollection();
         $this->blocks            = new ArrayCollection();
         $this->blockers          = new ArrayCollection();
         $this->blockedMagazines  = new ArrayCollection();
+        $this->blockedDomains    = new ArrayCollection();
         $this->reports           = new ArrayCollection();
+        $this->favourites        = new ArrayCollection();
         $this->violations        = new ArrayCollection();
         $this->notifications     = new ArrayCollection();
 
@@ -220,12 +302,18 @@ class User implements UserInterface
 
     public function getModeratedMagazines(): Collection
     {
+        // Tokens
         $this->moderatorTokens->get(-1);
-
         $criteria = Criteria::create()
             ->andWhere(Criteria::expr()->eq('isConfirmed', true));
+        $tokens   = $this->moderatorTokens->matching($criteria);
 
-        return $this->moderatorTokens->matching($criteria);
+        // Magazines
+        $magazines = $tokens->map(fn($token) => $token->magazine);
+        $criteria  = Criteria::create()
+            ->orderBy(['lastActive' => Criteria::DESC]);
+
+        return $magazines->matching($criteria);
     }
 
     public function addEntry(Entry $entry): self
@@ -332,7 +420,6 @@ class User implements UserInterface
 
         if ($this->blocks->removeElement($userBlock)) {
             if ($userBlock->blocker === $this) {
-                $userBlock->blocker = null;
                 $blocked->blockers->removeElement($this);
             }
         }
@@ -412,7 +499,7 @@ class User implements UserInterface
     public function blockMagazine(Magazine $magazine): self
     {
         if (!$this->isBlockedMagazine($magazine)) {
-            $this->blockedMagazines->add($magazineBlock = new MagazineBlock($this, $magazine));
+            $this->blockedMagazines->add(new MagazineBlock($this, $magazine));
         }
 
         return $this;
@@ -440,6 +527,41 @@ class User implements UserInterface
             if ($magazineBlock->user === $this) {
                 $magazineBlock->magazine = null;
                 $this->blockedMagazines->removeElement($magazineBlock);
+            }
+        }
+    }
+
+    public function blockDomain(Domain $domain): self
+    {
+        if (!$this->isBlockedDomain($domain)) {
+            $this->blockedDomains->add(new DomainBlock($this, $domain));
+        }
+
+        return $this;
+    }
+
+    public function isBlockedDomain(Domain $domain): bool
+    {
+        $criteria = Criteria::create()
+            ->where(Criteria::expr()->eq('domain', $domain));
+
+        return $this->blockedDomains->matching($criteria)->count() > 0;
+    }
+
+    public function unblockDomain(Domain $domain): void
+    {
+        $criteria = Criteria::create()
+            ->where(Criteria::expr()->eq('domain', $domain));
+
+        /**
+         * @var $domainBlock DomainBlock
+         */
+        $domainBlock = $this->blockedDomains->matching($criteria)->first();
+
+        if ($this->blockedDomains->removeElement($domainBlock)) {
+            if ($domainBlock->user === $this) {
+                $domainBlock->domain = null;
+                $this->blockedMagazines->removeElement($domainBlock);
             }
         }
     }
@@ -511,5 +633,25 @@ class User implements UserInterface
         $roles[] = 'ROLE_USER';
 
         return array_unique($roles);
+    }
+
+    public function isAccountDeleted(): bool
+    {
+        return isset($this->id) && $this->username === "!deleted{$this->id}";
+    }
+
+    public function getUserIdentifier(): string
+    {
+        return $this->username;
+    }
+
+    public function __call(string $name, array $arguments)
+    {
+        // TODO: Implement @method string getUserIdentifier()
+    }
+
+    public function isEqualTo(UserInterface $user)
+    {
+        return !$user->isBanned;
     }
 }

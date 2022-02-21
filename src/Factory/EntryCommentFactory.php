@@ -1,4 +1,4 @@
-<?php declare(strict_types=1);
+<?php declare(strict_types = 1);
 
 namespace App\Factory;
 
@@ -14,17 +14,24 @@ class EntryCommentFactory
             $dto->body,
             $dto->entry,
             $user,
-            $dto->parent
+            $dto->parent,
+            $dto->ip
         );
     }
 
     public function createDto(EntryComment $comment): EntryCommentDto
     {
-        return (new EntryCommentDto())->create(
-            $comment->entry,
-            $comment->body,
-            null,
-            $comment->getId()
-        );
+        $dto             = new EntryCommentDto();
+        $dto->entry      = $comment->entry;
+        $dto->user       = $comment->user;
+        $dto->body       = $comment->body;
+        $dto->image      = $comment->image;
+        $dto->uv         = $comment->countUpVotes();
+        $dto->dv         = $comment->countDownVotes();
+        $dto->createdAt  = $comment->createdAt;
+        $dto->lastActive = $comment->lastActive;
+        $dto->setId($comment->getId());
+
+        return $dto;
     }
 }

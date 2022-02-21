@@ -1,6 +1,6 @@
-import {ApplicationController} from 'stimulus-use'
+import {Controller} from '@hotwired/stimulus';
 
-export default class extends ApplicationController {
+export default class extends Controller {
     static values = {
         isExpanded: Boolean
     };
@@ -13,7 +13,7 @@ export default class extends ApplicationController {
         this.isExpandedValue = false;
         this.element.style.maxHeight = '25rem'
 
-        if (this.element.scrollHeight > this.element.clientHeight
+        if (this.element.scrollHeight - 30 > this.element.clientHeight
             || this.element.scrollWidth > this.element.clientWidth) {
 
             this.moreBtn = this.createMoreBtn();

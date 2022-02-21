@@ -1,4 +1,4 @@
-<?php declare(strict_types=1);
+<?php declare(strict_types = 1);
 
 namespace App\DataFixtures;
 
@@ -26,18 +26,13 @@ class PostFixtures extends BaseFixture implements DependentFixtureInterface
     public function loadData(ObjectManager $manager): void
     {
         foreach ($this->provideRandomPosts(self::ENTRIES_COUNT) as $index => $post) {
-            $dto = (new PostDto())->create($post['magazine'], $post['user'], null, $post['body']);
+            $dto           = new PostDto();
+            $dto->magazine = $post['magazine'];
+            $dto->user     = $post['user'];
+            $dto->body     = $post['body'];
+            $dto->ip       = $post['ip'];
 
             $entity = $this->postManager->create($dto, $post['user']);
-
-//            $roll = rand(100, 500);
-//            if ($roll % 5) {
-//                $tempFile = $this->imageManager->download("https://picsum.photos/300/$roll?hash=$roll");
-//                $image    = $this->imageRepository->findOrCreateFromPath($tempFile);
-//
-//                $entity->setImage($image);
-//                $this->entityManager->flush();
-//            }
 
             $entity->createdAt = $this->getRandomTime();
             $entity->updateCounts();
@@ -57,6 +52,7 @@ class PostFixtures extends BaseFixture implements DependentFixtureInterface
                 'body'     => $this->faker->realText($this->faker->numberBetween(10, 1024)),
                 'magazine' => $this->getReference('magazine_'.rand(1, intval(MagazineFixtures::MAGAZINES_COUNT))),
                 'user'     => $this->getReference('user_'.rand(1, UserFixtures::USERS_COUNT)),
+                'ip'       => $this->faker->ipv4,
             ];
         }
     }

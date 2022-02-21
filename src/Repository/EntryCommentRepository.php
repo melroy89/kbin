@@ -2,10 +2,11 @@
 
 namespace App\Repository;
 
-use App\Entity\Entry;
+use App\Entity\Contracts\VisibilityInterface;
 use App\Entity\EntryComment;
 use App\Entity\MagazineBlock;
 use App\Entity\MagazineSubscription;
+use App\Entity\User;
 use App\Entity\UserBlock;
 use App\Entity\UserFollow;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -28,7 +29,7 @@ use Symfony\Component\Security\Core\Security;
  */
 class EntryCommentRepository extends ServiceEntityRepository
 {
-    const SORT_DEFAULT = 'aktywne';
+    const SORT_DEFAULT = 'active';
     const PER_PAGE = 15;
 
     private Security $security;
@@ -49,7 +50,7 @@ class EntryCommentRepository extends ServiceEntityRepository
         );
 
         try {
-            $pagerfanta->setMaxPerPage(self::PER_PAGE);
+            $pagerfanta->setMaxPerPage($criteria->perPage ?? self::PER_PAGE);
             $pagerfanta->setCurrentPage($criteria->page);
         } catch (NotValidCurrentPageException $e) {
             throw new NotFoundHttpException();
@@ -60,9 +61,7 @@ class EntryCommentRepository extends ServiceEntityRepository
 
     private function getEntryQueryBuilder(Criteria $criteria): QueryBuilder
     {
-        $qb = $this->createQueryBuilder('c')
-            ->addSelect('cc')
-            ->leftJoin('c.children', 'cc');
+        $qb = $this->createQueryBuilder('c');
 
         $this->addTimeClause($qb, $criteria);
         $this->filter($qb, $criteria);
@@ -82,6 +81,8 @@ class EntryCommentRepository extends ServiceEntityRepository
 
     private function filter(QueryBuilder $qb, Criteria $criteria): QueryBuilder
     {
+        $user = $this->security->getUser();
+
         if ($criteria->entry) {
             $qb->andWhere('c.entry = :entry')
                 ->setParameter('entry', $criteria->entry);
@@ -91,16 +92,28 @@ class EntryCommentRepository extends ServiceEntityRepository
             $qb->join('c.entry', 'e', Join::WITH, 'e.magazine = :magazine')
                 ->setParameter('magazine', $criteria->magazine)
                 ->andWhere('e.visibility = :visible')
-                ->setParameter('visible', Entry::VISIBILITY_VISIBLE);
+                ->setParameter('visible', VisibilityInterface::VISIBILITY_VISIBLE);
         } else {
             $qb->leftJoin('c.entry', 'e')
                 ->andWhere('e.visibility = :visible')
-                ->setParameter('visible', Entry::VISIBILITY_VISIBLE);
+                ->setParameter('visible', VisibilityInterface::VISIBILITY_VISIBLE);
         }
 
         if ($criteria->user) {
             $qb->andWhere('c.user = :user')
                 ->setParameter('user', $criteria->user);
+        }
+
+        if ($criteria->tag) {
+            $qb->andWhere($qb->expr()->like('c.tags', ':tag'))
+                ->setParameter('tag', "%{$criteria->tag}%");
+        }
+
+        if ($criteria->domain) {
+            $qb->andWhere('ced.name = :domain')
+                ->join('c.entry', 'ce')
+                ->join('ce.domain', 'ced')
+                ->setParameter('domain', $criteria->domain);
         }
 
         if ($criteria->subscribed) {
@@ -131,14 +144,30 @@ class EntryCommentRepository extends ServiceEntityRepository
             $qb->andWhere('c.parent IS NULL');
         }
 
+        if(!$user || $user->hideAdult) {
+            $qb->join('e.magazine', 'm')
+                ->andWhere('m.isAdult = :isAdult')
+                ->andWhere('e.isAdult = :isAdult')
+                ->setParameter('isAdult', false);
+        }
+
         switch ($criteria->sortOption) {
             case Criteria::SORT_HOT:
+            case Criteria::SORT_TOP:
                 $qb->orderBy('c.upVotes', 'DESC');
+                break;
+            case Criteria::SORT_ACTIVE:
+                $qb->orderBy('c.lastActive', 'DESC');
+                break;
+            case Criteria::SORT_NEW:
+                $qb->orderBy('c.createdAt', 'DESC');
                 break;
             default:
                 $qb->addOrderBy('c.lastActive', 'DESC')
                     ->addOrderBy('c.id', 'DESC');
         }
+
+        $qb->addOrderBy('c.createdAt', 'DESC');
 
         return $qb;
     }
@@ -161,9 +190,11 @@ class EntryCommentRepository extends ServiceEntityRepository
             ->addSelect('e')
             ->addSelect('v')
             ->addSelect('em')
+            ->addSelect('f')
             ->join('c.user', 'u')
             ->join('c.entry', 'e')
             ->join('c.votes', 'v')
+            ->leftJoin('c.favourites', 'f')
             ->join('e.magazine', 'em')
             ->where('c IN (?1)')
             ->setParameter(1, $comments)
@@ -174,10 +205,14 @@ class EntryCommentRepository extends ServiceEntityRepository
             ->select('PARTIAL c.{id}')
             ->addSelect('cc')
             ->addSelect('ccu')
+            ->addSelect('ccua')
             ->addSelect('ccv')
+            ->addSelect('ccf')
             ->leftJoin('c.children', 'cc')
             ->leftJoin('cc.user', 'ccu')
+            ->leftJoin('ccu.avatar', 'ccua')
             ->leftJoin('cc.votes', 'ccv')
+            ->leftJoin('cc.favourites', 'ccf')
             ->where('c IN (?1)')
             ->setParameter(1, $comments)
             ->getQuery()
@@ -198,5 +233,17 @@ class EntryCommentRepository extends ServiceEntityRepository
             ->setParameter(1, $comments)
             ->getQuery()
             ->execute();
+    }
+
+    public function findToDelete(User $user, int $limit): array
+    {
+        return $this->createQueryBuilder('c')
+            ->where('c.visibility != :visibility')
+            ->andWhere('c.user = :user')
+            ->setParameters(['visibility' => VisibilityInterface::VISIBILITY_SOFT_DELETED, 'user' => $user])
+            ->orderBy('c.id', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
     }
 }

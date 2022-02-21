@@ -1,0 +1,13 @@
+{% if(magazine is defined and magazine is not null) %}
+    <div class="kbin-random-magazine px-2">
+        <h4 class="font-weight-bold kbin-logo-color mb-3">{{ 'random_magazine'|trans }}</h4>
+        {{ component('magazine', {
+            magazine: magazine,
+            showRules: false,
+            showInfo: false,
+            showStats: false,
+            showSubButtons: false,
+            asLink: true
+        }) }}
+    </div>
+{% endif %}

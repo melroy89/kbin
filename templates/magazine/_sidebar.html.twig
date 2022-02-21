@@ -1,109 +1,54 @@
 {% include 'magazine/panel/_sidebar.html.twig' %}
 {% from 'user/_macros.html.twig' import user %}
 
-<div class="kbin-magazine mb-4 mt-lg-0">
-    <div class="kbin-magazine-header px-2">
-        {% if magazine.cover %}
-            <img class="img-thumbnail" src="{{ asset(magazine.cover.filePath) | imagine_filter('post_thumb') }}"
-                 alt="{{ magazine.title }}">
-        {% endif %}
-        <h2 class="font-weight-bold">{{ magazine.title }}</h2>
-        <h3 class="lead mb-2"><span class="text-muted">/m/</span>{{ magazine.name }}</h3>
+<div class="kbin-magazine mt-lg-0 mb-5">
+    {{ component('magazine', {magazine: magazine}) }}
 
-        <div class="mb-3">
-            {% include 'magazine/_sub_button.html.twig' %}
-        </div>
-    </div>
-
-    <div class="kbin-magazine-desc px-2 small">
-        {% if magazine.description %}
-            <p class="small">{{ magazine.description|markdown|raw }}</p>
-        {% endif %}
-
-        {% if magazine.rules %}
-            <p class="small">{{ magazine.rules|markdown|raw }}</p>
-        {% endif %}
-    </div>
-
-    <div class="kbin-magazine-stats mb-4">
-        <ul class="list-group list-group-flush mb-3">
-            <li class="list-group-item"><span class="text-muted">Utworzono:</span> {{ magazine.createdAt|ago }}</li>
-            <li class="list-group-item"><span class="text-muted">Autor:</span> {{ user(magazine.getOwner, {prefix: false}) }}</li>
-            <li class="list-group-item"><span class="text-muted">Subskrybujących:</span> 1</li>
-        </ul>
-
-        <ul class="list-group kbin-magazine-stats-links">
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-                <a class="stretched-link" href="{{ path('front_magazine', {'name': magazine.name }) }}">Treści</a>
-                <span class="badge bg-primary rounded-pill">{{ magazine.entryCount }}</span>
-            </li>
-
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-                <a class="stretched-link" href="{{ get_active_comments_page_path() }}">Komentarze</a>
-                <span class="badge bg-primary rounded-pill">{{ magazine.entryCommentCount }}</span>
-            </li>
-
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-                <a class="stretched-link" href="{{ get_active_posts_page_path() }}">Wpisy</a>
-                <span class="badge bg-primary rounded-pill">{{ magazine.postCount }}</span>
-            </li>
-
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-                <a class="stretched-link" href="{{ get_active_posts_page_path() }}">Odpowiedzi do wpisów</a>
-                <span class="badge bg-primary rounded-pill">{{ magazine.postCommentCount }}</span>
-            </li>
-
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-                <a class="stretched-link" href="{{ path('magazine_moderators', {'name': magazine.name}) }}">Moderatorzy</a>
-                <span class="badge bg-primary rounded-pill">{{ magazine.moderators|length }}</span>
-            </li>
-
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-                <a class="stretched-link" href="{{ path('magazine_modlog', {'name': magazine.name}) }}">Log moderatorski</a>
-                <span class="badge bg-primary rounded-pill">{{ magazine.logs|length }}</span>
-            </li>
-        </ul>
-    </div>
-
-    {% if magazine.moderators|length %}
-        <div class="kbin-moderators mb-4">
-            <div class="card">
-                <div class="card-header">
-                    Moderatorzy
+    <div class="col-12" style="clear:both">
+        <div class="row">
+            <div class="mb-4 {{ magazine.badges|length ? 'float-sm-start' : '' }}">
+                <div class="kbin-moderators">
+                    <div class="kbin-users kbin-moderators card">
+                        <div class="card-header">
+                            {{ 'moderators'|trans }}
+                        </div>
+                        <ul class="list-group list-group-flush">
+                            {% for moderator in magazine.moderators|slice(0, 5) %}
+                                <li class="list-group-item">
+                                    {% include 'user/_avatar.html.twig' with { user: moderator.user } %}<span class="text-muted">/u/</span><a
+                                            class="text-decoration-none stretched-link"
+                                            href="{{ path('user', {'username': moderator.user.username}) }}">{{ moderator.user.username }}</a>
+                                </li>
+                            {% endfor %}
+                            {% if magazine.moderators|length > 5 %}
+                                <li class="list-group-item text-center">
+                                    <a class="text-decoration-none stretched-link"
+                                       href="{{ path('magazine_moderators', {'name': magazine.name}) }}">{{ 'more'|trans }}...</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </div>
                 </div>
-                <ul class="list-group list-group-flush">
-                    {% for moderator in magazine.moderators|slice(0, 5) %}
-                        <li class="list-group-item">
-                            {% include 'user/_avatar.html.twig' with { user: moderator.user } %}<span class="text-muted">/u/</span><a
-                                    class="text-decoration-none stretched-link"
-                                    href="{{ path('user', {'username': moderator.user.username}) }}">{{ moderator.user.username }}</a>
-                        </li>
-                    {% endfor %}
-                    {% if magazine.moderators|length > 5 %}
-                        <li class="list-group-item text-center">
-                            <a class="text-decoration-none stretched-link"
-                               href="{{ path('magazine_moderators', {'name': magazine.name}) }}">więcej...</a>
-                        </li>
-                    {% endif %}
-                </ul>
             </div>
-        </div>
-    {% endif %}
 
-    {% if magazine.badges|length %}
-        <div class="kbin-moderators">
-            <div class="card">
-                <div class="card-header">
-                    Etykiety
+            {% if magazine.badges|length %}
+                <div class="mb-4">
+                    <div class="kbin-badges">
+                        <div class="card">
+                            <div class="card-header">
+                                {{ 'badges'|trans }}
+                            </div>
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item">
+                                    {% for badge in magazine.badges %}
+                                        <span class="badge bg-secondary me-1">{{ badge.name }}</span>
+                                    {% endfor %}
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
-                <ul class="list-group list-group-flush">
-                    <li class="list-group-item">
-                        {% for badge in magazine.badges %}
-                            <span class="badge bg-secondary me-1">{{ badge.name }}</span>
-                        {% endfor %}
-                    </li>
-                </ul>
-            </div>
+            {% endif %}
         </div>
-    {% endif %}
+    </div>
 </div>

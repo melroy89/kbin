@@ -1,23 +1,21 @@
-{% from 'magazine/_macros.html.twig' import magazine %}
-
 <div class="table-responsive">
     <table class="table align-middle">
         <thead>
         <tr>
-            <td>Nazwa</td>
-            <td>Treści</td>
-            <td>Komentarze</td>
-            <td>Wpisy</td>
+            <td>{{ 'name'|trans }}</td>
+            <td>{{ 'threads'|trans }}</td>
+            <td>{{ 'comments'|trans }}</td>
+            <td>{{ 'posts'|trans }}</td>
             <td></td>
         </tr>
         </thead>
         <tbody>
         {% for magazine in magazines %}
             <tr>
-                <td>{{ magazine(magazine) }}</td>
+                <td>{{ component('magazine_inline', { magazine: magazine }) }}</td>
                 <td>{{ magazine.entryCount }}</td>
                 <td>{{ magazine.entryCommentCount }}</td>
-                <td>0</td>
+                <td>{{ magazine.postCount }}</td>
                 <td>{% include 'magazine/_sub_button.html.twig' %}</td>
             </tr>
         {% endfor %}
@@ -26,5 +24,5 @@
 </div>
 
 {% if(magazines.haveToPaginate) %}
-    {{ pagerfanta(magazines, null, {'pageParameter':'[strona]'}) }}
+    {{ pagerfanta(magazines, null, {'pageParameter':'[p]'}) }}
 {% endif %}

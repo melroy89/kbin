@@ -2,11 +2,14 @@
 
 namespace App\Repository;
 
+use App\Entity\DomainBlock;
+use App\Entity\DomainSubscription;
 use App\Entity\Entry;
 use App\Entity\Magazine;
 use App\Entity\MagazineBlock;
 use App\Entity\MagazineSubscription;
 use App\Entity\Moderator;
+use App\Entity\User;
 use App\Entity\UserBlock;
 use App\Entity\UserFollow;
 use App\PageView\EntryPageView;
@@ -29,8 +32,8 @@ use Symfony\Component\Security\Core\Security;
  */
 class EntryRepository extends ServiceEntityRepository
 {
-    const SORT_DEFAULT = 'aktywne';
-    const TIME_DEFAULT = EntryPageView::TIME_ALL;
+    const SORT_DEFAULT = 'hot';
+    const  TIME_DEFAULT = EntryPageView::TIME_ALL;
     const PER_PAGE = 25;
 
     private Security $security;
@@ -51,7 +54,7 @@ class EntryRepository extends ServiceEntityRepository
         );
 
         try {
-            $pagerfanta->setMaxPerPage(self::PER_PAGE);
+            $pagerfanta->setMaxPerPage($criteria->perPage ?? self::PER_PAGE);
             $pagerfanta->setCurrentPage($criteria->page);
         } catch (NotValidCurrentPageException $e) {
             throw new NotFoundHttpException();
@@ -118,15 +121,28 @@ class EntryRepository extends ServiceEntityRepository
                 ->setParameter('type', $criteria->type);
         }
 
+        if ($criteria->tag) {
+            $qb->andWhere($qb->expr()->like('e.tags', ':tag'))
+                ->setParameter('tag', "%{$criteria->tag}%");
+        }
+
+        if ($criteria->domain) {
+            $qb->andWhere('ed.name = :domain')
+                ->join('e.domain', 'ed')
+                ->setParameter('domain', $criteria->domain);
+        }
+
         if ($criteria->subscribed) {
             $qb->andWhere(
                 'e.magazine IN (SELECT IDENTITY(ms.magazine) FROM '.MagazineSubscription::class.' ms WHERE ms.user = :user) 
                 OR 
                 e.user IN (SELECT IDENTITY(uf.following) FROM '.UserFollow::class.' uf WHERE uf.follower = :user)
+                OR 
+                e.domain IN (SELECT IDENTITY(ds.domain) FROM '.DomainSubscription::class.' ds WHERE ds.user = :user)
                 OR
                 e.user = :user'
-            );
-            $qb->setParameter('user', $this->security->getUser());
+            )
+                ->setParameter('user', $this->security->getUser());
         }
 
         if ($criteria->moderated) {
@@ -144,13 +160,25 @@ class EntryRepository extends ServiceEntityRepository
                 'e.magazine NOT IN (SELECT IDENTITY(mb.magazine) FROM '.MagazineBlock::class.' mb WHERE mb.user = :magazineBlocker)'
             );
             $qb->setParameter('magazineBlocker', $user);
+
+            if (!$criteria->domain) {
+                $qb->andWhere(
+                    'e.domain NOT IN (SELECT IDENTITY(db.domain) FROM '.DomainBlock::class.' db WHERE db.user = :domainBlocker)'
+                );
+                $qb->setParameter('domainBlocker', $user);
+            }
+        }
+
+        if (!$user || $user->hideAdult) {
+            $qb->andWhere('m.isAdult = :isAdult')
+                ->setParameter('isAdult', false);
         }
 
         switch ($criteria->sortOption) {
-            case Criteria::SORT_HOT:
+            case Criteria::SORT_TOP:
                 $qb->addOrderBy('e.score', 'DESC');
                 break;
-            case Criteria::SORT_TOP:
+            case Criteria::SORT_HOT:
                 $qb->addOrderBy('e.ranking', 'DESC');
                 break;
             case Criteria::SORT_COMMENTED:
@@ -163,6 +191,8 @@ class EntryRepository extends ServiceEntityRepository
             default:
                 $qb->addOrderBy('e.id', 'DESC');
         }
+
+        $qb->addOrderBy('e.createdAt', 'DESC');
 
         return $qb;
     }
@@ -191,7 +221,9 @@ class EntryRepository extends ServiceEntityRepository
             $this->_em->createQueryBuilder()
                 ->select('PARTIAL e.{id}')
                 ->addSelect('ev')
+                ->addSelect('ef')
                 ->from(Entry::class, 'e')
+                ->leftJoin('e.favourites', 'ef')
                 ->leftJoin('e.votes', 'ev')
                 ->where('e IN (?1)')
                 ->setParameter(1, $entries)
@@ -210,5 +242,17 @@ class EntryRepository extends ServiceEntityRepository
                 ->getQuery()
                 ->getSingleScalarResult()
         );
+    }
+
+    public function findToDelete(User $user, int $limit): array
+    {
+        return $this->createQueryBuilder('e')
+            ->where('e.visibility != :visibility')
+            ->andWhere('e.user = :user')
+            ->setParameters(['visibility' => Entry::VISIBILITY_SOFT_DELETED, 'user' => $user])
+            ->orderBy('e.id', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
     }
 }

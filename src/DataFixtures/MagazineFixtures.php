@@ -3,29 +3,51 @@
 namespace App\DataFixtures;
 
 use App\DTO\MagazineDto;
+use App\Repository\ImageRepository;
+use App\Service\ImageManager;
 use App\Service\MagazineManager;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\DataFixtures\DependentFixtureInterface;
+use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ObjectManager;
 
 class MagazineFixtures extends BaseFixture implements DependentFixtureInterface
 {
     const MAGAZINES_COUNT = UserFixtures::USERS_COUNT / 3;
 
-    public function __construct(private MagazineManager $magazineManager)
-    {
+    public function __construct(
+        private MagazineManager $magazineManager,
+        private ImageManager $imageManager,
+        private ImageRepository $imageRepository,
+        private EntityManagerInterface $entityManager
+    ) {
     }
 
     public function loadData(ObjectManager $manager): void
     {
         foreach ($this->provideRandomMagazines(self::MAGAZINES_COUNT) as $index => $magazine) {
-            $dto = (new MagazineDto())->create(
-                $magazine['name'],
-                $magazine['title'],
-                $magazine['badges'],
-                $magazine['description'],
-                $magazine['rules']
-            );
+            $image = null;
+            $width = rand(100, 400);
+
+            try {
+                $tempFile = $this->imageManager->download("https://picsum.photos/{$width}/?hash=$width");
+            } catch (\Exception $e) {
+                $tempFile = null;
+            }
+
+            if ($tempFile) {
+                $image = $this->imageRepository->findOrCreateFromPath($tempFile);
+                $this->entityManager->flush();
+            }
+
+            $dto              = new MagazineDto();
+            $dto->name        = $magazine['name'];
+            $dto->title       = $magazine['title'];
+            $dto->description = $magazine['description'];
+            $dto->description = $magazine['description'];
+            $dto->rules       = $magazine['rules'];
+            $dto->badges      = $magazine['badges'];
+            $dto->cover       = $image;
 
             $entity = $this->magazineManager->create($dto, $magazine['user']);
 
@@ -42,7 +64,7 @@ class MagazineFixtures extends BaseFixture implements DependentFixtureInterface
             $title = substr($this->faker->words($this->faker->numberBetween(1, 5), true), 0, 50);
 
             if (in_array($title, $titles)) {
-                continue;
+                $title = $title . bin2hex(random_bytes(5));
             }
 
             $titles[] = $title;

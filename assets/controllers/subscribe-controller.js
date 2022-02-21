@@ -1,4 +1,4 @@
-import {Controller} from 'stimulus';
+import {Controller} from '@hotwired/stimulus';
 import {fetch, ok} from "../utils/http";
 
 export default class extends Controller {
@@ -17,6 +17,11 @@ export default class extends Controller {
 
         this.loadingValue = true;
 
+        if (!window.KBIN_LOGGED_IN) {
+            document.querySelector(".kbn-login-btn a").click()
+            return;
+        }
+
         try {
             let response = await fetch(this.isSubscribedValue ? this.removeUrlValue : this.addUrlValue, {
                 method: 'POST',
@@ -29,6 +34,7 @@ export default class extends Controller {
             this.isSubscribedValue = response.isSubscribed;
             this.subCountValue = response.subCount;
         } catch (e) {
+            alert('Oops, something went wrong.');
             throw e;
         } finally {
             this.loadingValue = false;

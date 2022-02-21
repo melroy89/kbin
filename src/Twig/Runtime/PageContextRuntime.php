@@ -2,21 +2,27 @@
 
 namespace App\Twig\Runtime;
 
-use App\Entity\Magazine;
 use App\Repository\EntryCommentRepository;
 use App\Repository\EntryRepository;
 use App\Repository\PostRepository;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Twig\Extension\RuntimeExtensionInterface;
 
 class PageContextRuntime implements RuntimeExtensionInterface
 {
     public function __construct(
         private RequestStack $requestStack,
-        private UrlGeneratorInterface $urlGenerator
+        private UrlGeneratorInterface $urlGenerator,
+        private TranslatorInterface $translator
     ) {
+    }
+
+    public function isStartPage(): bool
+    {
+        return $this->isRouteContains('front') || in_array($this->getCurrentRouteName(), ['magazine_entry_comments', 'magazine_posts']);
     }
 
     public function isHomePage(): bool
@@ -24,23 +30,19 @@ class PageContextRuntime implements RuntimeExtensionInterface
         return in_array($this->getCurrentRouteName(), ['front', 'entry_comments_front', 'posts_front']);
     }
 
+    public function isFrontPage(): bool
+    {
+        return $this->isRouteContains('front') || in_array($this->getCurrentRouteName(), ['magazine_entry_comments', 'magazine_posts']);
+    }
+
     private function getCurrentRouteName(): string
     {
-        return $this->getCurrentRequest()->get('_route');
+        return $this->getCurrentRequest()->get('_route') ?? 'front';
     }
 
     private function getCurrentRequest(): ?Request
     {
         return $this->requestStack->getCurrentRequest();
-    }
-
-    public function isCurrentMagazinePage(Magazine $magazine): bool
-    {
-        if (!$magazineRequest = $this->getCurrentRequest()->get('magazine')) {
-            return false;
-        }
-
-        return $magazineRequest === $magazine;
     }
 
     public function isUserProfilePage(): bool
@@ -92,7 +94,8 @@ class PageContextRuntime implements RuntimeExtensionInterface
             }
         }
 
-        return ($requestSort = $this->getCurrentRequest()->get('sortBy') ?? EntryRepository::SORT_DEFAULT) === $sortOption;
+        return ($this->getCurrentRequest()->get('sortBy') ?? strtolower($this->translator->trans('sort.'.EntryRepository::SORT_DEFAULT)))
+            === $sortOption;
     }
 
     public function isCommentsPage(): bool
@@ -119,6 +122,17 @@ class PageContextRuntime implements RuntimeExtensionInterface
         return str_starts_with($this->getCurrentRouteName(), 'user');
     }
 
+    public function isTagPage(): bool
+    {
+        return str_starts_with($this->getCurrentRouteName(), 'tag');
+    }
+
+    public function isDomainPage(): bool
+    {
+        return str_starts_with($this->getCurrentRouteName(), 'domain');
+    }
+
+
     public function getActiveTimeOption()
     {
         return $this->getCurrentRequest()->get('time') ?? EntryRepository::TIME_DEFAULT;
@@ -126,7 +140,7 @@ class PageContextRuntime implements RuntimeExtensionInterface
 
     public function getActiveTypeOption(): ?string
     {
-        return $this->getCurrentRequest()->get('typ', null);// @todo
+        return $this->getCurrentRequest()->get('type', null);// @todo
     }
 
     public function getActiveSortOptionPath(?string $sortOption = null, ?string $time = null, ?string $type = null, $entriesOnly = true): string
@@ -147,11 +161,11 @@ class PageContextRuntime implements RuntimeExtensionInterface
             $routeParams['time'] = $time;
         }
 
-        if ($this->getCurrentRequest()->get('typ')) {
-            $routeParams['typ'] = $this->getCurrentRequest()->get('typ');
+        if ($this->getCurrentRequest()->get('type')) {
+            $routeParams['type'] = $this->getCurrentRequest()->get('type');
         }
         if ($type) {
-            $routeParams['typ'] = $type;
+            $routeParams['type'] = $type;
         }
 
         if (!$entriesOnly) {
@@ -208,6 +222,30 @@ class PageContextRuntime implements RuntimeExtensionInterface
             }
         }
 
+        if ($this->isTagPage()) {
+            $routeName           = 'tag_front';
+            $routeParams['name'] = $this->getCurrentRequest()->get('name');
+
+
+            if($this->isCommentsPage() && !$entriesOnly) {
+                $routeName  = 'tag_entry_comments_front';
+            }
+
+            if($this->isPostsPage() && !$entriesOnly) {
+                $routeName  = 'tag_posts_front';
+            }
+        }
+
+        if ($this->isDomainPage()) {
+            $routeName           = 'domain_front';
+            $routeParams['name'] = $this->getCurrentRequest()->get('name');
+
+
+            if($this->isCommentsPage() && !$entriesOnly) {
+                $routeName  = 'domain_entry_comments_front';
+            }
+        }
+
         return $this->urlGenerator->generate(
             $routeName,
             $routeParams
@@ -216,7 +254,7 @@ class PageContextRuntime implements RuntimeExtensionInterface
 
     public function getActiveSortOption()
     {
-        return $this->getCurrentRequest()->get('sortBy') ?? EntryRepository::SORT_DEFAULT;
+        return $this->getCurrentRequest()->get('sortBy') ?? $this->translator->trans('sort.'.EntryRepository::SORT_DEFAULT);
     }
 
     public function isMagazinePage(): bool
@@ -238,10 +276,14 @@ class PageContextRuntime implements RuntimeExtensionInterface
         return str_contains($this->getCurrentRouteName(), 'moderated');
     }
 
-    public function getActiveCommentsPagePath()
+    public function getActiveCommentsPagePath(): string
     {
         $routeName   = 'entry_comments_front';
-        $routeParams = ['sortBy' => EntryCommentRepository::SORT_DEFAULT];
+        $routeParams = ['sortBy' => strtolower($this->translator->trans('sort.'.EntryCommentRepository::SORT_DEFAULT))];
+
+        if ($time = $this->getCurrentRequest()->get('time')) {
+            $routeParams['time'] = $time;
+        }
 
         if ($this->isMagazinePage()) {
             $magazine = $this->getCurrentRequest()->get('magazine');
@@ -258,8 +300,14 @@ class PageContextRuntime implements RuntimeExtensionInterface
             $routeName = 'entry_comments_moderated';
         }
 
-        if ($time = $this->getCurrentRequest()->get('time')) {
-            $routeParams['time'] = $time;
+        if ($this->isTagPage()) {
+            $routeName           = 'tag_entry_comments_front';
+            $routeParams['name'] = $this->getCurrentRequest()->get('name');
+        }
+
+        if ($this->isDomainPage()) {
+            $routeName           = 'domain_entry_comments_front';
+            $routeParams['name'] = $this->getCurrentRequest()->get('name');
         }
 
         return $this->urlGenerator->generate(
@@ -268,10 +316,14 @@ class PageContextRuntime implements RuntimeExtensionInterface
         );
     }
 
-    public function getActivePostsPagePath()
+    public function getActivePostsPagePath(): string
     {
         $routeName   = 'posts_front';
-        $routeParams = ['sortBy' => PostRepository::SORT_DEFAULT];
+        $routeParams = ['sortBy' => strtolower($this->translator->trans('sort.'.PostRepository::SORT_DEFAULT))];
+
+        if ($time = $this->getCurrentRequest()->get('time')) {
+            $routeParams['time'] = $time;
+        }
 
         if ($this->isMagazinePage()) {
             $magazine = $this->getCurrentRequest()->get('magazine');
@@ -288,8 +340,9 @@ class PageContextRuntime implements RuntimeExtensionInterface
             $routeName = 'posts_moderated';
         }
 
-        if ($time = $this->getCurrentRequest()->get('time')) {
-            $routeParams['time'] = $time;
+        if ($this->isTagPage()) {
+            $routeName           = 'tag_posts_front';
+            $routeParams['name'] = $this->getCurrentRequest()->get('name');
         }
 
         return $this->urlGenerator->generate(
@@ -326,6 +379,7 @@ class PageContextRuntime implements RuntimeExtensionInterface
 
     public function isActiveCommentFilter(string $sortOption): bool
     {
-        return ($this->getCurrentRequest()->get('sortBy') ?? EntryCommentRepository::SORT_DEFAULT) === $sortOption;
+        return ($this->getCurrentRequest()->get('sortBy') ?? strtolower($this->translator->trans('sort.'.PostRepository::SORT_DEFAULT)))
+            === $sortOption;
     }
 }

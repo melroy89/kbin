@@ -1,39 +1,187 @@
+entry_comment_create:
+  controller: App\Controller\Entry\Comment\CommentCreateController
+  defaults: { slug: -, parent_comment_id: null }
+  path:
+    en: /m/{magazine_name}/t/{entry_id}/{slug}/comment/{parent_comment_id}
+    pl: /m/{magazine_name}/t/{entry_id}/{slug}/komentarz/{parent_comment_id}
+  methods: [ GET, POST ]
+
+entry_comment_edit:
+  controller: App\Controller\Entry\Comment\CommentEditController
+  defaults: { slug: -, }
+  path:
+    en: /m/{magazine_name}/t/{entry_id}/{slug}/comment/{comment_id}/edit
+    pl: /m/{magazine_name}/t/{entry_id}/{slug}/komentarz/{comment_id}/edytuj
+  methods: [ GET, POST ]
+
+entry_comment_delete:
+  controller: App\Controller\Entry\Comment\CommentDeleteController::delete
+  defaults: { slug: -, }
+  path: /m/{magazine_name}/t/{entry_id}/{slug}/comments/{comment_id}/delete
+  methods: [ POST ]
+
+entry_comment_restore:
+  controller: App\Controller\Entry\Comment\CommentDeleteController::restore
+  defaults: { slug: -, }
+  path: /m/{magazine_name}/t/{entry_id}/{slug}/comments/{comment_id}/restore
+  methods: [ POST ]
+
+entry_comment_purge:
+  controller: App\Controller\Entry\Comment\CommentDeleteController::purge
+  defaults: { slug: -, }
+  path: /m/{magazine_name}/t/{entry_id}/{slug}/comments/{comment_id}/purge
+  methods: [ POST ]
+
+entry_comment_image_delete:
+  controller: App\Controller\Entry\Comment\CommentDeleteImageController
+  defaults: { slug: -, }
+  path: /m/{magazine_name}/t/{entry_id}/{slug}/comments/{comment_id}/delete_image
+  methods: [ POST ]
+
+entry_comment_voters:
+  controller: App\Controller\Entry\Comment\EntryCommentVotersController
+  defaults: { slug: -, }
+  path:
+    en: /m/{magazine_name}/t/{entry_id}/{slug}/comment/{comment_id}/votes
+    pl: /m/{magazine_name}/t/{entry_id}/{slug}/komentarz/{comment_id}/głosy
+  methods: [ GET ]
+
+entry_comments_front:
+  controller: App\Controller\Entry\Comment\CommentFrontController::front
+  defaults: { sortBy: ~, time: ~ }
+  path:
+    en: /comments/{sortBy}/{time}
+    pl: /komentarze/{sortBy}/{time}
+  methods: [GET]
+  requirements: { sortBy: "%front_sort_options%" }
+
+entry_comments_subscribed:
+  controller: App\Controller\Entry\Comment\CommentFrontController::subscribed
+  defaults: { sortBy: ~, time: ~ }
+  path:
+    en: /sub/comments/{sortBy}/{time}
+    pl: /sub/komentarze/{sortBy}/{time}
+  methods: [GET]
+  requirements: { sortBy: "%front_sort_options%" }
+
+entry_comments_moderated:
+  controller: App\Controller\Entry\Comment\CommentFrontController::moderated
+  defaults: { sortBy: ~, time: ~ }
+  path:
+    en: /mod/comments/{sortBy}/{time}
+    pl: /mod/komentarze/{sortBy}/{time}
+  methods: [GET]
+  requirements: { sortBy: "%front_sort_options%" }
+
+magazine_entry_comments:
+  controller: App\Controller\Entry\Comment\CommentFrontController::front
+  defaults: { sortBy: ~, time: ~ }
+  path:
+    en: /m/{name}/comments/{sortBy}/{time}
+    pl: /m/{name}/komentarze/{sortBy}/{time}
+  methods: [GET]
+  requirements: { sortBy: "%front_sort_options%" }
+
+entry_comment_vote:
+  controller: App\Controller\VoteController
+  defaults: { entityClass: App\Entity\EntryComment }
+  path: /ecv/{id}/{choice}
+  methods: [POST]
+
+entry_comment_report:
+  controller: App\Controller\ReportController
+  defaults: { entityClass: App\Entity\EntryComment }
+  path: /ecr/{id}
+  methods: [ GET, POST ]
+
+entry_comment_favourite:
+  controller: App\Controller\FavouriteController
+  defaults: { entityClass: App\Entity\EntryComment }
+  path: /ecf/{id}
+  methods: [ POST ]
+
 entry_create:
-  controller: App\Controller\Entry\EntryController::create
+  controller: App\Controller\Entry\EntryCreateController
   defaults: { type: null }
-  path: /nowaTresc/{type}
+  path:
+    en: /new/{type}
+    pl: /nowy/{type}
   methods: [ GET, POST ]
 
 magazine_entry_create:
-  controller: App\Controller\Entry\EntryController::create
+  controller: App\Controller\Entry\EntryCreateController
   defaults: { type: null }
-  path: /m/{name}/nowaTresc/{type}
+  path:
+    en: /m/{name}/new/{type}
+    pl: /m/{name}/nowy/{type}
   methods: [ GET, POST ]
 
 entry_edit:
-  controller: App\Controller\Entry\EntryController::edit
-  path: /m/{magazine_name}/t/{entry_id}/edytuj
+  controller: App\Controller\Entry\EntryEditController
+  defaults: { slug: -, sortBy: ~ }
+  path:
+    en: /m/{magazine_name}/t/{entry_id}/{slug}/edit
+    pl: /m/{magazine_name}/t/{entry_id}/{slug}/edytuj
   methods: [ GET, POST ]
 
 entry_delete:
-  controller: App\Controller\Entry\EntryController::delete
-  path: /m/{magazine_name}/t/{entry_id}/delete
+  controller: App\Controller\Entry\EntryDeleteController::delete
+  defaults: { slug: -, sortBy: ~ }
+  path: /m/{magazine_name}/t/{entry_id}/{slug}/delete
+  methods: [ POST ]
+
+entry_restore:
+  controller: App\Controller\Entry\EntryDeleteController::restore
+  defaults: { slug: -, sortBy: ~ }
+  path: /m/{magazine_name}/t/{entry_id}/{slug}/restore
   methods: [ POST ]
 
 entry_purge:
-  controller: App\Controller\Entry\EntryController::purge
-  path: /m/{magazine_name}/t/{entry_id}/purge
+  controller: App\Controller\Entry\EntryDeleteController::purge
+  defaults: { slug: -, sortBy: ~ }
+  path: /m/{magazine_name}/t/{entry_id}/{slug}/purge
+  methods: [ POST ]
+
+entry_image_delete:
+  controller: App\Controller\Entry\EntryDeleteImageController
+  defaults: { slug: -, }
+  path: /m/{magazine_name}/e/{entry_id}/{slug}/delete_image
   methods: [ POST ]
 
 entry_pin:
   controller: App\Controller\Entry\EntryPinController
-  path: /m/{magazine_name}/t/{entry_id}/pin
+  defaults: { slug: -, sortBy: ~ }
+  path: /m/{magazine_name}/t/{entry_id}/{slug}/pin
   methods: [ POST ]
 
+entry_voters:
+  controller: App\Controller\Entry\EntryVotersController
+  defaults: { slug: -, sortBy: ~ }
+  path:
+    en: /m/{magazine_name}/t/{entry_id}/{slug}/votes
+    pl: /m/{magazine_name}/t/{entry_id}/{slug}/głosy
+  methods: [ GET ]
+
+entry_tips:
+  controller: App\Controller\Entry\EntryTipController
+  defaults: { slug: -, sortBy: ~ }
+  path:
+    en: /m/{magazine_name}/t/{entry_id}/{slug}/tips
+    pl: /m/{magazine_name}/t/{entry_id}/{slug}/tipy
+  methods: [ GET ]
+
 entry_single:
-  controller: App\Controller\Entry\EntryController::single
-  defaults: { sortBy: ~ }
-  path: /m/{magazine_name}/t/{entry_id}/{sortBy}
+  controller: App\Controller\Entry\EntrySingleController
+  defaults: { slug: -, sortBy: ~ }
+  path: /m/{magazine_name}/t/{entry_id}/{slug}/{sortBy}
+  methods: [ GET ]
+
+entry_single_comments:
+  controller: App\Controller\Entry\EntrySingleController
+  defaults: { slug: -, sortBy: ~ }
+  path:
+    en: /m/{magazine_name}/t/{entry_id}/{slug}/comments/{sortBy}
+    pl: /m/{magazine_name}/t/{entry_id}/{slug}/komentarze/{sortBy}
   methods: [ GET ]
 
 entry_vote:
@@ -47,3 +195,21 @@ entry_report:
   defaults: { entityClass: App\Entity\Entry }
   path: /er/{id}
   methods: [ GET, POST ]
+
+entry_favourite:
+  controller: App\Controller\FavouriteController
+  defaults: { entityClass: App\Entity\Entry }
+  path: /ef/{id}
+  methods: [ POST ]
+
+entry_cti:
+  controller: App\Controller\Entry\EntryCardanoTxInitController
+  defaults: { entityClass: App\Entity\Entry }
+  path: /ecti/{id}
+  methods: [ POST ]
+
+entry_cardano_transaction:
+  controller: App\Controller\Cardano\CardanoTransactionController
+  defaults: { entityClass: App\Entity\Entry }
+  path: /ect/{id}
+  methods: [ POST ]

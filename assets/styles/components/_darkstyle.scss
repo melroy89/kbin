@@ -1,6 +1,8 @@
 .kbin-dark {
   color: #d4d4d4;
-  background: #222222;
+  background: $kbin-dark-background;
+  background-repeat: repeat;
+  background-position: top left;
 
   a {
     color: #afafaf;
@@ -42,7 +44,7 @@
     border-color: #202425;
   }
 
-  .kbin-comment-wrapper-header {
+  .kbin-comment-header {
     border-color: #191919;
   }
 
@@ -75,8 +77,13 @@
   /* BUTTONS */
 
   .btn-link {
-    color: #fff;
-    background: #222222;
+    color: #afafaf;
+    text-decoration: none;
+    background: none;
+
+    &:hover {
+      color: #eee;
+    }
   }
 
   .btn-close {
@@ -480,10 +487,6 @@
     filter: invert(0) grayscale(0%) brightness(0%);
   }
 
-  .toast-body {
-    color: #1f1f1f;
-  }
-
   /* ACCORDIONS */
 
   .accordion:not(.accordion-flush) {
@@ -684,6 +687,14 @@
     background-color: #202020;
     border-color: #2e2f2f;
   }
+
+  .kbin-post-content,
+  .kbin-comment-content,
+  .kbin-entry-content {
+    a {
+      color: #718db1;
+    }
+  }
 }
 
 .disabled {
@@ -698,4 +709,18 @@
 
 .choices__input {
   caret-color: white !important;
+}
+
+.alert {
+  .btn-close {
+    filter: none;
+  }
+
+  a {
+    color: $primary;
+
+    &:hover {
+      color: black !important;
+    }
+  }
 }

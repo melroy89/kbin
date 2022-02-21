@@ -56,7 +56,7 @@ abstract class AbstractController extends BaseAbstractController
         );
     }
 
-    protected function getJsonFormResponse(FormInterface $form, string $template): JsonResponse
+    protected function getJsonFormResponse(FormInterface $form, string $template, ?array $variables = null): JsonResponse
     {
         return new JsonResponse(
             [
@@ -64,7 +64,7 @@ abstract class AbstractController extends BaseAbstractController
                     $template,
                     [
                         'form' => $form->createView(),
-                    ]
+                    ] + ($variables ?? [])
                 ),
             ]
         );
@@ -72,7 +72,7 @@ abstract class AbstractController extends BaseAbstractController
 
     protected function getPageNb(Request $request): int
     {
-        return (int) $request->get('strona', 1);
+        return (int) $request->get('p', 1);
     }
 
     protected function redirectToEntry(Entry $entry): Response
@@ -82,6 +82,7 @@ abstract class AbstractController extends BaseAbstractController
             [
                 'magazine_name' => $entry->magazine->name,
                 'entry_id'      => $entry->getId(),
+                'slug'          => $entry->slug,
             ]
         );
     }
@@ -93,6 +94,7 @@ abstract class AbstractController extends BaseAbstractController
             [
                 'magazine_name' => $post->magazine->name,
                 'post_id'       => $post->getId(),
+                'slug'          => $post->slug,
             ]
         );
     }

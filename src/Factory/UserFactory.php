@@ -1,4 +1,4 @@
-<?php declare(strict_types=1);
+<?php declare(strict_types = 1);
 
 namespace App\Factory;
 
@@ -12,6 +12,7 @@ class UserFactory
         return (new UserDto())->create(
             $user->username,
             $user->email,
+            $user->avatar,
             $user->getId(),
         );
     }

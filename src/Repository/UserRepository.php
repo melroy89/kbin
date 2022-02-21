@@ -16,6 +16,7 @@ use Pagerfanta\Doctrine\ORM\QueryAdapter;
 use Pagerfanta\Exception\NotValidCurrentPageException;
 use Pagerfanta\Pagerfanta;
 use Pagerfanta\PagerfantaInterface;
+use Symfony\Bridge\Doctrine\Security\User\UserLoaderInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Security\Core\Exception\UnsupportedUserException;
 use Symfony\Component\Security\Core\User\PasswordUpgraderInterface;
@@ -29,7 +30,7 @@ use function get_class;
  * @method User[]    findAll()
  * @method User[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
  */
-class UserRepository extends ServiceEntityRepository implements PasswordUpgraderInterface
+class UserRepository extends ServiceEntityRepository implements UserLoaderInterface, PasswordUpgraderInterface
 {
     const PER_PAGE = 25;
 
@@ -38,7 +39,12 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
         parent::__construct($registry, User::class);
     }
 
-    public function findByUsernameOrEmail($val)
+    public function loadUserByUsername(string $username)
+    {
+        return $this->loadUserByIdentifier($username);
+    }
+
+    public function loadUserByIdentifier($val)
     {
         return $this->createQueryBuilder('u')
             ->where('u.username = :email')
@@ -67,17 +73,17 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
         // @todo union adapter
         $conn = $this->_em->getConnection();
         $sql  = "
-        (SELECT id, created_at, user_id, 'entry' AS type FROM entry WHERE user_id = {$user->getId()}) 
+        (SELECT id, created_at, 'entry' AS type FROM entry WHERE user_id = {$user->getId()}) 
         UNION 
-        (SELECT id, created_at, user_id, 'entry_comment' AS type FROM entry_comment WHERE user_id = {$user->getId()})
+        (SELECT id, created_at, 'entry_comment' AS type FROM entry_comment WHERE user_id = {$user->getId()})
         UNION 
-        (SELECT id, created_at, user_id, 'post' AS type FROM post WHERE user_id = {$user->getId()})
+        (SELECT id, created_at, 'post' AS type FROM post WHERE user_id = {$user->getId()})
         UNION 
-        (SELECT id, created_at, user_id, 'post_comment' AS type FROM post_comment WHERE user_id = {$user->getId()})
+        (SELECT id, created_at, 'post_comment' AS type FROM post_comment WHERE user_id = {$user->getId()})
         ORDER BY created_at DESC
         ";
         $stmt = $conn->prepare($sql);
-        $stmt->execute();
+        $stmt = $stmt->executeQuery();
 
         $pagerfanta = new Pagerfanta(
             new ArrayAdapter(
@@ -85,9 +91,11 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
             )
         );
 
+        $countAll = $pagerfanta->count();
+
         try {
-            $pagerfanta->setMaxPerPage(35);
-            $pagerfanta->setCurrentPage($page);
+            $pagerfanta->setMaxPerPage(20000);
+            $pagerfanta->setCurrentPage(1);
         } catch (NotValidCurrentPageException $e) {
             throw new NotFoundHttpException();
         }
@@ -113,8 +121,9 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
         );
 
         try {
-            $pagerfanta->setMaxPerPage(35);
+            $pagerfanta->setMaxPerPage(self::PER_PAGE);
             $pagerfanta->setCurrentPage($page);
+            $pagerfanta->setMaxNbPages($countAll > 0 ? ((int) ceil(($countAll / self::PER_PAGE))) : 1);
         } catch (NotValidCurrentPageException $e) {
             throw new NotFoundHttpException();
         }

@@ -1,53 +1,54 @@
 {% extends 'base.html.twig' %}
-{% from 'post/_macros.html.twig' import post %}
-{% from 'post/comment/_macros.html.twig' import comment %}
 {% from '_layout/_not_found.html.twig' import not_found %}
 
-{% block title %}{{ post.body|slice(0, 35) ~ '...' }} | Wpisy | {{ parent() }}{% endblock %}
+{% block title %}{{ get_short_desc(post.body) }} - {{ magazine.title }}{% endblock %}
+{% block description %}{{ magazine.description ? get_short_desc(magazine.description) : '' }}{% endblock %}
+{% block image %}{{ post.image ? uploaded_asset(post.image.filePath) : magazine.cover ? uploaded_asset(magazine.cover.filePath) : '' }}{% endblock %}
 
     {% block body %}
-        <div class="kbin-posts-page">
-            <section class="kbin-post-wrapper kbin-comment-wrapper mt-4">
-                <div class="mt-2">
-                    {# {% include 'entry/comment/_filters.html.twig' %} #}
-                </div>
-                <div class="kbin-comment-list">
-                    {{ post(post, {
-                        post: post,
-                        self: app.user,
-                        extra_classes: 'kbin-post-list-item',
-                        title_tag: 'h4'
-                    }) }}
+        {% if post.isAdult and (not app.user or app.user.hideAdult) %}
+            {% include '_layout/_adult.html.twig' %}
+        {% else %}
+            {% include '_layout/_flash.html.twig' %}
+            <div class="kbin-posts-page">
+                <section class="kbin-post-wrapper kbin-comment-wrapper mt-4">
+                    <div class="mt-2">
+                        {# {% include 'entry/comment/_filters.html.twig' %} #}
+                    </div>
+                    <div class="kbin-comment-list"
+                         data-controller="comment-list"
+                         data-action="notify:PostCommentCreatedNotification@window->comment-list#add"
+                         {% if post is defined and post %}data-comment-list-subject-id-value="{{ post.id }}"{% endif %}>
 
-                    {% block before_comments %}
-                        {% if is_granted('comment', post) %}
-                            <div class="ps-sm-5">
-                                {{ render(controller('App\\Controller\\Post\\PostCommentController::commentForm', {
-                                    'magazineName': magazine.name,
-                                    'postId': post.id,
-                                })) }}
-                            </div>
+                        {{ component('post', {post: post, extraClass: 'kbin-post-list-item', showMagazine: magazine is not defined}) }}
+
+                        {% block before_comments %}
+                            {% if is_granted('comment', post) %}
+                                <div class="ps-sm-5">
+                                    {{ component('post_comment_form', {post: post}) }}
+                                </div>
+                            {% else %}
+                                <div class="alert alert-secondary text-muted my-3" role="alert">
+                                    {% if not app.user %}
+                                        {{ 'login_to_comment'|trans({'%link_start%' : '<a class="font-weight-bold" href="'~path('app_login')~'">', '%link_end%' : '</a>'}) | raw }}
+                                    {% else %}
+                                        {{ 'cannot_add_comment'|trans }}
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        {% endblock %}
+
+                        {% if comments|length %}
+                            {% for comment in comments %}
+                                {{ component('post_comment', {comment: comment}) }}
+                            {% endfor %}
                         {% else %}
-                            <div class="alert alert-secondary text-muted my-3" role="alert">
-                                {% if not app.user %}
-                                    <a href="{{ path('app_login') }}" class="font-weight-bold">Zaloguj się</a> aby dodać komentarz.
-                                {% else %}
-                                    Nie możesz dodać komentarza.
-                                {% endif %}
-                            </div>
+                            {{ not_found() }}
                         {% endif %}
-                    {% endblock %}
-
-                    {% if comments|length %}
-                        {% for comment in comments %}
-                            {{ comment(comment) }}
-                        {% endfor %}
-                    {% else %}
-                        {{ not_found() }}
-                    {% endif %}
-                </div>
-            </section>
-        </div>
+                    </div>
+                </section>
+            </div>
+        {% endif %}
     {% endblock %}
 
 {% block sidebar %}

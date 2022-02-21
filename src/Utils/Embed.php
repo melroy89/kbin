@@ -6,11 +6,15 @@ use App\Entity\Entry;
 use App\Service\ImageManager;
 use Embed\Embed as BaseEmbed;
 use Exception;
-use Symfony\Component\Cache\Adapter\FilesystemAdapter;
+use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 
 class Embed
 {
+    public function __construct(private CacheInterface $cache)
+    {
+    }
+
     public ?string $url = null;
     public ?string $title = null;
     public ?string $image = null;
@@ -18,9 +22,7 @@ class Embed
 
     public function fetch($url): self
     {
-        $cache = new FilesystemAdapter();
-
-        return $cache->get(
+        return $this->cache->get(
             'embed_'.md5($url),
             function (ItemInterface $item) use ($url) {
                 $item->expiresAfter(3600);
@@ -29,7 +31,10 @@ class Embed
                     $embed  = (new BaseEmbed())->get($url);
                     $oembed = $embed->getOEmbed();
                 } catch (Exception $e) {
-                    return $this;
+                    $c = clone $this;
+                    unset($c->cache);
+
+                    return $c;
                 }
 
                 $this->url   = $url;
@@ -41,13 +46,20 @@ class Embed
                     $this->html = $this->cleanIframe($embed->code->html);
                 }
 
-                return $this;
+                $c = clone $this;
+                unset($c->cache);
+
+                return $c;
             }
         );
     }
 
     private function cleanIframe(?string $html): ?string
     {
+        if (!$html || str_contains($html, 'wp-embedded-content')) {
+            return null;
+        }
+
         return $html;
 
 //        $types = [

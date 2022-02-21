@@ -3,25 +3,29 @@
 namespace App\Service\Notification;
 
 use ApiPlatform\Core\Api\IriConverterInterface;
+use App\Entity\Contracts\ContentInterface;
 use App\Entity\Notification;
 use App\Entity\Post;
 use App\Entity\PostCreatedNotification;
 use App\Entity\PostDeletedNotification;
+use App\Entity\PostEditedNotification;
 use App\Factory\MagazineFactory;
 use App\Repository\MagazineSubscriptionRepository;
+use App\Repository\NotificationRepository;
+use App\Service\Contracts\ContentNotificationManagerInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Exception;
 use Symfony\Component\Mercure\PublisherInterface;
 use Symfony\Component\Mercure\Update;
 use Twig\Environment;
-use function count;
 
-class PostNotificationManager
+class PostNotificationManager implements ContentNotificationManagerInterface
 {
     use NotificationTrait;
 
     public function __construct(
-        private MagazineSubscriptionRepository $repository,
+        private NotificationRepository $notificationRepository,
+        private MagazineSubscriptionRepository $magazineRepository,
         private IriConverterInterface $iriConverter,
         private MagazineFactory $magazineFactory,
         private PublisherInterface $publisher,
@@ -30,35 +34,42 @@ class PostNotificationManager
     ) {
     }
 
-    public function sendCreated(Post $post): void
+    public function sendCreated(ContentInterface $subject): void
     {
-        $subs    = $this->getUsersToNotify($this->repository->findNewPostSubscribers($post));
+        /**
+         * @var Post $subject
+         */
+        $this->notifyMagazine(new PostCreatedNotification($subject->user, $subject));
+
+        $subs    = $this->getUsersToNotify($this->magazineRepository->findNewPostSubscribers($subject));
         $follows = [];
 
         $usersToNotify = $this->merge($subs, $follows);
 
-        $this->notifyMagazine($post, new PostCreatedNotification($post->user, $post));
-
-        if (!count($usersToNotify)) {
-            return;
-        }
-
         foreach ($usersToNotify as $subscriber) {
-            $notify = new PostCreatedNotification($subscriber, $post);
+            $notify = new PostCreatedNotification($subscriber, $subject);
             $this->entityManager->persist($notify);
         }
 
         $this->entityManager->flush();
     }
 
-    private function notifyMagazine(Post $post, PostCreatedNotification $notification)
+    public function sendEdited(ContentInterface $subject): void
+    {
+        /**
+         * @var Post $subject
+         */
+        $this->notifyMagazine(new PostEditedNotification($subject->user, $subject));
+    }
+
+    private function notifyMagazine(Notification $notification)
     {
         try {
-            $iri = $this->iriConverter->getIriFromItem($this->magazineFactory->createDto($post->magazine));
+            $iri = $this->iriConverter->getIriFromItem($this->magazineFactory->createDto($notification->post->magazine));
 
             $update = new Update(
-                $iri,
-                $this->getResponse($post, $notification)
+                ['pub', $iri],
+                $this->getResponse($notification)
             );
 
             ($this->publisher)($update);
@@ -67,21 +78,36 @@ class PostNotificationManager
         }
     }
 
-    private function getResponse(Post $post, Notification $notification): string
+    private function getResponse(Notification $notification): string
     {
+        $class = explode("\\", $this->entityManager->getClassMetadata(get_class($notification))->name);
+
         return json_encode(
             [
-                'postId'       => $post->getId(),
-                'notification' => $this->twig->render('_layout/_toast.html.twig', ['notification' => $notification]),
+                'op'       => end($class),
+                'id'       => $notification->post->getId(),
+                'magazine' => [
+                    'name' => $notification->post->magazine->name,
+                ],
+                'toast'    => $this->twig->render('_layout/_toast.html.twig', ['notification' => $notification]),
             ]
         );
     }
 
-    public function sendDeleted(Post $post): void
+    public function sendDeleted(ContentInterface $post): void
     {
-        $notification = new PostDeletedNotification($post->getUser(), $post);
+        /**
+         * @var Post $post
+         */
+        $this->notifyMagazine($notification = new PostDeletedNotification($post->user, $post));
+    }
 
-        $this->entityManager->persist($notification);
-        $this->entityManager->flush();
+    public function purgeNotifications(Post $post)
+    {
+        $notificationsIds = $this->notificationRepository->findPostNotificationsIds($post);
+
+        foreach ($notificationsIds as $id) {
+            $this->entityManager->remove($this->notificationRepository->find($id));
+        }
     }
 }

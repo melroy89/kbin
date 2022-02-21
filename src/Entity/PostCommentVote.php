@@ -1,4 +1,4 @@
-<?php declare(strict_types=1);
+<?php declare(strict_types = 1);
 
 namespace App\Entity;
 
@@ -15,6 +15,7 @@ use Doctrine\ORM\Mapping as ORM;
  * @ORM\AssociationOverrides({
  *     @ORM\AssociationOverride(name="user", inversedBy="postCommentVotes")
  * })
+ * @ORM\Cache("NONSTRICT_READ_WRITE")
  */
 class PostCommentVote extends Vote
 {

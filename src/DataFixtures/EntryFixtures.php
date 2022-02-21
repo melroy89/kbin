@@ -32,17 +32,32 @@ class EntryFixtures extends BaseFixture implements DependentFixtureInterface
     public function loadData(ObjectManager $manager): void
     {
         foreach ($this->provideRandomEntries(self::ENTRIES_COUNT) as $index => $entry) {
-            $dto = (new EntryDto())->create($entry['magazine'], $entry['user'], $entry['title'], $entry['url'], $entry['body']);
+            $dto           = new EntryDto();
+            $dto->magazine = $entry['magazine'];
+            $dto->user     = $entry['user'];
+            $dto->title    = $entry['title'];
+            $dto->url      = $entry['url'];
+            $dto->body     = $entry['body'];
+            $dto->ip       = $entry['ip'];
 
             $entity = $this->entryManager->create($dto, $entry['user']);
 
             $roll = rand(1, 400);
             if ($roll % 5) {
-                $tempFile = $this->imageManager->download("https://picsum.photos/300/$roll?hash=$roll");
-                $image    = $this->imageRepository->findOrCreateFromPath($tempFile);
+                $entity = $this->entryManager->create($dto, $entry['user']);
 
-                $entity->image = $image;
-                $this->entityManager->flush();
+                try {
+                    $tempFile = $this->imageManager->download("https://picsum.photos/300/$roll?hash=$roll");
+                } catch (\Exception $e) {
+                    $tempFile = null;
+                }
+
+                if ($tempFile) {
+                    $image = $this->imageRepository->findOrCreateFromPath($tempFile);
+
+                    $entity->image = $image;
+                    $this->entityManager->flush();
+                }
             }
 
             $entity->createdAt = $this->getRandomTime();
@@ -69,6 +84,7 @@ class EntryFixtures extends BaseFixture implements DependentFixtureInterface
                 'body'     => $body,
                 'magazine' => $this->getReference('magazine_'.rand(1, intval(MagazineFixtures::MAGAZINES_COUNT))),
                 'user'     => $this->getReference('user_'.rand(1, UserFixtures::USERS_COUNT)),
+                'ip'       => $this->faker->ipv4,
             ];
         }
     }

@@ -16,6 +16,8 @@ use App\Factory\MagazineFactory;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Webmozart\Assert\Assert;
 
 class MagazineManager
@@ -23,12 +25,18 @@ class MagazineManager
     public function __construct(
         private MagazineFactory $factory,
         private EventDispatcherInterface $dispatcher,
+        private RateLimiterFactory $magazineLimiter,
         private EntityManagerInterface $entityManager
     ) {
     }
 
     public function create(MagazineDto $dto, User $user): Magazine
     {
+        $limiter = $this->magazineLimiter->create($dto->ip);
+        if (false === $limiter->consume()->isAccepted()) {
+            throw new TooManyRequestsHttpException();
+        }
+
         $magazine = $this->factory->createFromDto($dto, $user);
 
         $this->entityManager->persist($magazine);
@@ -155,14 +163,69 @@ class MagazineManager
         $this->entityManager->flush();
     }
 
-    public function changeTheme(MagazineThemeDto $dto)
+    public function changeTheme(MagazineThemeDto $dto): Magazine
     {
         $magazine = $dto->magazine;
 
-        $magazine->cover     = $dto->cover;
-        $magazine->customCss = $dto->customCss;
-        $magazine->customJs  = $dto->customJs;
+        $magazine->cover = $dto->cover ?? $magazine->cover;
 
+        $background = null;
+        $customCss  = null;
+
+        // Background
+        if ($dto->backgroundImage) {
+            $background = match ($dto->backgroundImage) {
+                'shape1' => 'https://karab.in/build/images/shape.png',
+                'shape2' => 'https://karab.in/build/images/shape2.png',
+                default => null,
+            };
+            $background = $background ? "#kbin, .kbin-dark #kbin { background: url($background); height: 100%; }" : null;
+        }
+
+        // Colors
+        if ($dto->primaryColor !== '#000000' || $dto->primaryDarkerColor !== '#000000') {
+            $customCss = <<<EOL
+                    .bg-primary {
+                      background-color: $dto->primaryColor
+                    }
+                    
+                    .kbin-featured-magazines {
+                      background-color: $dto->primaryColor
+                    }
+                    
+                    .kbin-featured-magazines-list-item a.highlighted {
+                      background-color: $dto->primaryDarkerColor;
+                    }
+                    
+                    .kbin-featured-magazines-list-item a.highlighted:hover,
+                    .kbin-featured-magazines-list-item a:hover {
+                      background-color: $dto->primaryDarkerColor;
+                    }
+                    
+                    .scroll-progress {
+                      background-color: $dto->primaryDarkerColor !important;
+                    }
+                    
+                    .kbin-featured-magazines-list-item--active a:hover {
+                      background-color: #fbfbfb !important;
+                      color: $dto->primaryColor !important;
+                    }
+                EOL;
+        }
+
+        if ($background || $customCss) {
+            $magazine->customCss = ($background ?? '').($customCss ?? '');
+        } else if ($dto->customCss) {
+            $magazine->customCss = $dto->customCss;
+        } else {
+            $magazine->customCss = null;
+        }
+
+        //        $magazine->customJs = $dto->customJs;
+
+        $this->entityManager->persist($magazine);
         $this->entityManager->flush();
+
+        return $magazine;
     }
 }

@@ -2,13 +2,33 @@ framework:
   rate_limiter:
     vote:
       policy: 'sliding_window'
-      limit: 100
+      limit: 220
       interval: '60 minutes'
-    create_comment:
-      policy: 'sliding_window'
-      limit: 30
-      interval: '60 minutes'
-    create_entry:
+    entry:
       policy: 'fixed_window'
       limit: 20
       interval: '60 minutes'
+    entry_comment:
+      policy: 'sliding_window'
+      limit: 30
+      interval: '60 minutes'
+    post:
+      policy: 'fixed_window'
+      limit: 30
+      interval: '60 minutes'
+    post_comment:
+      policy: 'sliding_window'
+      limit: 40
+      interval: '60 minutes'
+    user_register:
+      policy: 'fixed_window'
+      limit: 2
+      interval: '360 minutes'
+    magazine:
+      policy: 'fixed_window'
+      limit: 3
+      interval: '360 minutes'
+    contact:
+      policy: 'fixed_window'
+      limit: 3
+      interval: '2 minutes'

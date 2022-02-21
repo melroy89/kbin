@@ -1,32 +1,33 @@
-<?php declare(strict_types=1);
+<?php declare(strict_types = 1);
 
 namespace App\DTO;
 
 use App\Entity\Entry;
 use App\Entity\EntryComment;
 use App\Entity\Image;
+use App\Entity\Magazine;
+use App\Entity\User;
+use DateTime;
+use DateTimeImmutable;
 use Symfony\Component\Validator\Constraints as Assert;
 
 class EntryCommentDto
 {
-    public Entry $entry;
-    #[Assert\NotBlank]
-    #[Assert\Length(min: 2, max: 5000)]
-    public ?string $body;
+    public Magazine|MagazineDto|null $magazine = null;
+    public User|UserDto|null $user = null;
+    public Entry|EntryDto|null $entry = null;
     public ?EntryComment $parent = null;
     public ?EntryComment $root = null;
-    public ?Image $image = null;
+    public Image|ImageDto|null $image = null;
+    #[Assert\NotBlank]
+    #[Assert\Length(min: 2, max: 5000)]
+    public ?string $body = null;
+    public ?int $uv = null;
+    public ?int $dv = null;
+    public ?string $ip = null;
+    public ?DateTimeImmutable $createdAt = null;
+    public ?DateTime $lastActive = null;
     private ?int $id = null;
-
-    public function create(Entry $entry, string $body, ?Image $image = null, ?int $id = null): self
-    {
-        $this->id    = $id;
-        $this->entry = $entry;
-        $this->body  = $body;
-        $this->image = $image;
-
-        return $this;
-    }
 
     public function createWithParent(Entry $entry, ?EntryComment $parent, ?Image $image = null, ?string $body = null): self
     {
@@ -45,5 +46,10 @@ class EntryCommentDto
     public function getId(): ?int
     {
         return $this->id;
+    }
+
+    public function setId(int $id): void
+    {
+        $this->id = $id;
     }
 }

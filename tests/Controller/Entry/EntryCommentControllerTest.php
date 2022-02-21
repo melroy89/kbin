@@ -14,7 +14,7 @@ class EntryCommentControllerTest extends WebTestCase
 
         $entry = $this->getEntryByTitle('title');
 
-        $crawler = $client->request('GET', $entryUrl = '/m/polityka/t/'.$entry->getId());
+        $crawler = $client->request('GET', '/m/polityka/t/'.$entry->getId().'/-/komentarze');
 
         $client->submit(
             $crawler->selectButton('Gotowe')->form(
@@ -24,14 +24,11 @@ class EntryCommentControllerTest extends WebTestCase
             )
         );
 
-        $this->assertResponseRedirects($entryUrl);
-
         $crawler = $client->followRedirect();
 
-        $this->assertResponseIsSuccessful();
         $this->assertSelectorTextContains('blockquote', 'przykladowa tresc');
         $this->assertSelectorTextContains('.kbin-sidebar .kbin-magazine .kbin-magazine-stats-links', 'Komentarze 1');
-        $this->assertSelectorTextContains('.kbin-entry .kbin-entry-meta', '1 komentarzy');
+        $this->assertSelectorTextContains('.kbin-entry .kbin-entry-meta', '1 komentarz');
     }
 
     public function testCanEditEntryComment()
@@ -41,7 +38,7 @@ class EntryCommentControllerTest extends WebTestCase
 
         $comment = $this->createEntryComment('przykładowy komentarz');
 
-        $entryUrl = "/m/polityka/t/{$comment->entry->getId()}";
+        $entryUrl = "/m/polityka/t/{$comment->entry->getId()}/-/komentarze";
 
         $crawler = $client->request('GET', '/');
         $crawler = $client->request('GET', $entryUrl);
@@ -55,43 +52,56 @@ class EntryCommentControllerTest extends WebTestCase
             )
         );
 
-        $this->assertResponseRedirects($entryUrl);
-
         $crawler = $client->followRedirect();
 
         $this->assertResponseIsSuccessful();
         $this->assertSelectorTextContains('blockquote', 'zmieniona treść');
     }
 
-    public function testCanPurgeEntryComment()
+    public function testCanDeleteEntryComment()
     {
         $client = $this->createClient();
         $client->loginUser($this->getUserByUsername('regularUser'));
 
         $user2 = $this->getUserByUsername('regularUser2');
 
-        $comment  = $this->createEntryComment('przykładowy komentarz');
-        $comment2 = $this->createEntryComment('test', $comment->entry);
+        $comment = $this->createEntryComment('przykładowy komentarz');
+        $comment2 = $this->createEntryComment('test');
+        $child1 = $this->createEntryComment('child', null, $user2, $comment);
+        $child2 = $this->createEntryComment('child2', null, null, $child1);
 
         $this->createVote(1, $comment, $user2);
         $this->createVote(1, $comment2, $user2);
+        $this->createVote(1, $child1, $user2);
 
-        $entryUrl = "/m/polityka/t/{$comment->entry->getId()}";
+        $entryUrl = "/m/polityka/t/{$child1->entry->getId()}/-";
+        $crawler  = $client->request('GET', $entryUrl);
+        $crawler  = $client->request('GET', $entryUrl);
 
         $crawler = $client->request('GET', "{$entryUrl}/komentarz/{$comment->getId()}/edytuj");
-
         $client->submit(
-            $crawler->selectButton('Usuń')->form()
+            $crawler->filter('.kbin-comment-wrapper')->selectButton('usuń')->form()
         );
-        $this->assertResponseRedirects($entryUrl);
-
         $crawler = $client->followRedirect();
 
-        $this->assertResponseIsSuccessful();
-        $this->assertSelectorTextNotContains('blockquote', '[Treść usunięta przez użytkownika]');
+        $crawler = $client->request('GET', "{$entryUrl}/komentarz/{$comment2->getId()}/edytuj");
+        $client->submit(
+            $crawler->filter('.kbin-comment-wrapper')->selectButton('usuń')->form()
+        );
+        $crawler = $client->followRedirect();
+
+        $crawler = $client->request('GET', "{$entryUrl}");
+        $client->submit(
+            $crawler->filter('[data-comment-id-value]')->selectButton('usuń')->form()
+        );
+        $crawler = $client->followRedirect();
+
+        $this->assertSelectorTextContains('blockquote#'.$comment->getId(), '[usunięte przez autora]');
+        $this->assertSelectorTextContains('blockquote#'.$child1->getId(), '[usunięte przez moderację]');
+        $this->assertCount(3, $crawler->filter('.kbin-comment-content'));
 
         $this->assertSelectorTextContains('.kbin-sidebar .kbin-magazine .kbin-magazine-stats-links', 'Komentarze 1');
-        $this->assertSelectorTextContains('.kbin-entry .kbin-entry-meta', '1 komentarzy');
+        $this->assertSelectorTextContains('.kbin-entry .kbin-entry-meta', '1 komentarz');
     }
 
     public function testUnauthorizedUserCannotPurgeEntryComment()
@@ -103,10 +113,10 @@ class EntryCommentControllerTest extends WebTestCase
         $client->catchExceptions(false);
         $comment = $this->createEntryComment('przykładowy komentarz');
 
-        $entryUrl = "/m/polityka/t/{$comment->entry->getId()}";
+        $entryUrl = "/m/polityka/t/{$comment->entry->getId()}/-";
 
         $crawler = $client->request('GET', '/');
-        $crawler = $client->request('GET', $entryUrl);
+        $crawler = $client->request('GET', $entryUrl.'/komentarze');
 
         $this->assertEmpty($crawler->filter('.kbin-entry-meta')->selectLink('edytuj'));
         $this->assertSelectorTextContains('blockquote', 'przykładowy komentarz');
@@ -138,8 +148,8 @@ class EntryCommentControllerTest extends WebTestCase
         $this->assertSelectorTextContains('.kbin-comment-level--2', 'komentarz 2');
         $this->assertCount(1, $crawler->filter('.kbin-comment-level--2'));
 
-        $crawler = $client->click($crawler->filter('.kbin-comment-level--2')->selectLink('odpowiedz')->link());
         $this->assertSelectorTextContains('.kbin-comment-wrapper', 'odpowiedz');
+        $crawler = $client->click($crawler->filter('.kbin-comment-level--2')->selectLink('odpowiedz')->link());
 
         $client->submit(
             $crawler->selectButton('Gotowe')->form(
@@ -155,39 +165,5 @@ class EntryCommentControllerTest extends WebTestCase
 
         $this->assertSelectorTextContains('.kbin-comment-level--3', 'komentarz poziomu 3');
         $this->assertCount(1, $crawler->filter('.kbin-comment-level--3'));
-    }
-
-    public function testCanPurgeNestedComments()
-    {
-        $client = $this->createClient();
-        $client->loginUser($this->getUserByUsername('regularUser'));
-
-        $entry = $this->getEntryByTitle('testowy wpis');
-        $user1 = $this->getUserByUsername('regularUser');
-        $user2 = $this->getUserByUsername('regularUser2');
-        $user3 = $this->getUserByUsername('regularUser3');
-
-        $comment1 = $this->createEntryComment('komentarz 1', $entry, $user1);
-        $comment2 = $this->createEntryComment('komentarz 2', $entry, $user2, $comment1);
-        $comment3 = $this->createEntryComment('komentarz 3', $entry, $user3, $comment2);
-
-        $crawler = $client->request('GET', '/');
-        $crawler = $client->click($crawler->filter('.kbin-entry-list .kbin-entry-title')->selectLink('testowy wpis')->link());
-
-        $crawler = $client->click($crawler->filter('.kbin-comment--top-level')->selectLink('edytuj')->link());
-        $this->assertSelectorTextContains('.kbin-comment-wrapper', 'odpowiedz');
-
-        $client->submit(
-            $crawler->selectButton('Usuń')->form()
-        );
-
-        $this->assertResponseRedirects();
-
-        $crawler = $client->followRedirect();
-
-        // @todo soft delete
-//        $this->assertSelectorNotExists('.kbin-comment--top-level');
-//        $this->assertSelectorNotExists('.kbin-comment-level--2');
-//        $this->assertSelectorNotExists('.kbin-comment-level--3');
     }
 }

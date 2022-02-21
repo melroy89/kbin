@@ -1,4 +1,4 @@
-<?php declare(strict_types=1);
+<?php declare(strict_types = 1);
 
 namespace App\ActivityPub;
 
@@ -7,7 +7,6 @@ use ActivityPhp\Type;
 use App\ActivityPub\Ontology\Mastodon;
 use App\ActivityPub\Ontology\Peertube;
 use App\ActivityPub\Ontology\Pleroma;
-use App\ActivityPub\Type\Person;
 use App\ActivityPub\Type\PropertyValue;
 use JetBrains\PhpStorm\NoReturn;
 
@@ -22,7 +21,7 @@ class Server
                 'ontologies' => [
                     'peertube' => Peertube::class,
                     'mastodon' => Mastodon::class,
-                    'pleroma' => Pleroma::class,
+                    'pleroma'  => Pleroma::class,
                 ],
             ]
         );

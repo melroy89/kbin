@@ -1,4 +1,4 @@
-<?php declare(strict_types=1);
+<?php declare(strict_types = 1);
 
 namespace App\Controller;
 
@@ -20,11 +20,11 @@ class FrontController extends AbstractController
     public function front(?string $sortBy, ?string $time, Request $request): Response
     {
         $criteria = new EntryPageView($this->getPageNb($request));
-        $criteria->showSortOption($criteria->translateSort($sortBy))
-            ->setTime($criteria->translateTime($time))
-            ->setType($criteria->translateType($request->get('typ', null)));
+        $criteria->showSortOption($criteria->resolveSort($sortBy))
+            ->setTime($criteria->resolveTime($time))
+            ->setType($criteria->resolveType($request->get('type')));
 
-        $method  = $criteria->translateSort($sortBy);
+        $method  = $criteria->resolveSort($sortBy);
         $listing = $this->$method($criteria);
 
         return $this->render(
@@ -41,12 +41,12 @@ class FrontController extends AbstractController
     public function subscribed(?string $sortBy, ?string $time, Request $request): Response
     {
         $criteria = new EntryPageView($this->getPageNb($request));
-        $criteria->showSortOption($criteria->translateSort($sortBy))
-            ->setTime($criteria->translateTime($time))
-            ->setType($criteria->translateType($request->get('typ', null)));
+        $criteria->showSortOption($criteria->resolveSort($sortBy))
+            ->setTime($criteria->resolveTime($time))
+            ->setType($criteria->resolveType($request->get('type')));
         $criteria->subscribed = true;
 
-        $method  = $criteria->translateSort($sortBy);
+        $method  = $criteria->resolveSort($sortBy);
         $listing = $this->$method($criteria);
 
         return $this->render(
@@ -63,12 +63,12 @@ class FrontController extends AbstractController
     public function moderated(?string $sortBy, ?string $time, Request $request): Response
     {
         $criteria = new EntryPageView($this->getPageNb($request));
-        $criteria->showSortOption($criteria->translateSort($sortBy))
-            ->setTime($criteria->translateTime($time))
-            ->setType($criteria->translateType($request->get('typ', null)));
+        $criteria->showSortOption($criteria->resolveSort($sortBy))
+            ->setTime($criteria->resolveTime($time))
+            ->setType($criteria->resolveType($request->get('type', null)));
         $criteria->moderated = true;
 
-        $method  = $criteria->translateSort($sortBy);
+        $method  = $criteria->resolveSort($sortBy);
         $listing = $this->$method($criteria);
 
         return $this->render(
@@ -82,13 +82,13 @@ class FrontController extends AbstractController
     public function magazine(Magazine $magazine, ?string $sortBy, ?string $time, Request $request): Response
     {
         $criteria = (new EntryPageView($this->getPageNb($request)));
-        $criteria->showSortOption($criteria->translateSort($sortBy))
-            ->setTime($criteria->translateTime($time))
-            ->setType($criteria->translateType($request->get('typ', null)));
+        $criteria->showSortOption($criteria->resolveSort($sortBy))
+            ->setTime($criteria->resolveTime($time))
+            ->setType($criteria->resolveType($request->get('type')));
         $criteria->magazine      = $magazine;
         $criteria->stickiesFirst = true;
 
-        $method  = $criteria->translateSort($sortBy);
+        $method  = $criteria->resolveSort($sortBy);
         $listing = $this->$method($criteria);
 
         return $this->render(
@@ -115,9 +115,9 @@ class FrontController extends AbstractController
         return $this->repository->findByCriteria($criteria->showSortOption(Criteria::SORT_ACTIVE));
     }
 
-    private function new(EntryPageView $criteria): PagerfantaInterface
+    private function newest(EntryPageView $criteria): PagerfantaInterface
     {
-        return $this->repository->findByCriteria($criteria);
+        return $this->repository->findByCriteria($criteria->showSortOption(Criteria::SORT_NEW));
     }
 
     private function commented(EntryPageView $criteria): PagerfantaInterface

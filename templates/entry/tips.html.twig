@@ -1,0 +1,17 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'tips'|trans }} - {{ entry.title }}{% endblock %}
+
+{% block body %}
+    {{ component('entry', {entry: entry}) }}
+
+    {{ component('tip', { subject: entry, key: 'entry', transactions: transactions, mnemonicForm: mnemonicForm, transactionForm: transactionForm }) }}
+{% endblock %}
+
+{% block sidebar %}
+    {% include 'entry/_sidebar.html.twig' %}
+
+    {{ parent() }}
+
+    {% include 'magazine/_sidebar.html.twig' %}
+{% endblock %}

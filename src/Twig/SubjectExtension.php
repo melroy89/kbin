@@ -1,10 +1,10 @@
-<?php declare(strict_types=1);
+<?php declare(strict_types = 1);
 
 namespace App\Twig;
 
-use App\Entity\Contracts\ReportInterface;
 use App\Entity\Entry;
 use App\Entity\EntryComment;
+use App\Entity\Magazine;
 use App\Entity\Post;
 use App\Entity\PostComment;
 use Twig\Extension\AbstractExtension;
@@ -16,23 +16,28 @@ final class SubjectExtension extends AbstractExtension
     {
         return [
             new TwigTest(
-                'entry', function (ReportInterface $report) {
-                return $report instanceof Entry;
+                'entry', function ($subject) {
+                return $subject instanceof Entry;
             }
             ),
             new TwigTest(
-                'entry_comment', function (ReportInterface $report) {
-                return $report instanceof EntryComment;
+                'entry_comment', function ($subject) {
+                return $subject instanceof EntryComment;
             }
             ),
             new TwigTest(
-                'post', function (ReportInterface $report) {
-                return $report instanceof Post;
+                'post', function ($subject) {
+                return $subject instanceof Post;
             }
             ),
             new TwigTest(
-                'post_comment', function (ReportInterface $report) {
-                return $report instanceof PostComment;
+                'post_comment', function ($subject) {
+                return $subject instanceof PostComment;
+            }
+            ),
+            new TwigTest(
+                'magazine', function ($subject) {
+                return $subject instanceof Magazine;
             }
             ),
         ];

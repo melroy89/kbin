@@ -3,24 +3,29 @@
 namespace App\Service\Notification;
 
 use ApiPlatform\Core\Api\IriConverterInterface;
+use App\Entity\Contracts\ContentInterface;
 use App\Entity\Entry;
 use App\Entity\EntryCreatedNotification;
 use App\Entity\EntryDeletedNotification;
+use App\Entity\EntryEditedNotification;
+use App\Entity\Notification;
 use App\Factory\MagazineFactory;
 use App\Repository\MagazineSubscriptionRepository;
+use App\Repository\NotificationRepository;
+use App\Service\Contracts\ContentNotificationManagerInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Exception;
 use Symfony\Component\Mercure\PublisherInterface;
 use Symfony\Component\Mercure\Update;
 use Twig\Environment;
-use function count;
 
-class EntryNotificationManager
+class EntryNotificationManager implements ContentNotificationManagerInterface
 {
     use NotificationTrait;
 
     public function __construct(
-        private MagazineSubscriptionRepository $repository,
+        private NotificationRepository $notificationRepository,
+        private MagazineSubscriptionRepository $magazineRepository,
         private IriConverterInterface $iriConverter,
         private MagazineFactory $magazineFactory,
         private PublisherInterface $publisher,
@@ -29,34 +34,41 @@ class EntryNotificationManager
     ) {
     }
 
-    public function sendCreated(Entry $entry): void
+    public function sendCreated(ContentInterface $subject): void
     {
-        $subs      = $this->getUsersToNotify($this->repository->findNewEntrySubscribers($entry));
+        /**
+         * @var Entry $subject
+         */
+        $this->notifyMagazine(new EntryCreatedNotification($subject->user, $subject));
+
+        $subs      = $this->getUsersToNotify($this->magazineRepository->findNewEntrySubscribers($subject));
         $followers = [];
 
         $usersToNotify = $this->merge($subs, $followers);
 
-        $this->notifyMagazine(new EntryCreatedNotification($entry->user, $entry));
-
-        if (!count($usersToNotify)) {
-            return;
-        }
-
         foreach ($usersToNotify as $subscriber) {
-            $notification = new EntryCreatedNotification($subscriber, $entry);
+            $notification = new EntryCreatedNotification($subscriber, $subject);
             $this->entityManager->persist($notification);
         }
 
         $this->entityManager->flush();
     }
 
-    private function notifyMagazine(EntryCreatedNotification $notification): void
+    public function sendEdited(ContentInterface $subject): void
+    {
+        /**
+         * @var Entry $subject
+         */
+        $this->notifyMagazine(new EntryEditedNotification($subject->user, $subject));
+    }
+
+    private function notifyMagazine(Notification $notification): void
     {
         try {
             $iri = $this->iriConverter->getIriFromItem($this->magazineFactory->createDto($notification->entry->magazine));
 
             $update = new Update(
-                $iri,
+                ['pub', $iri],
                 $this->getResponse($notification)
             );
 
@@ -66,21 +78,36 @@ class EntryNotificationManager
         }
     }
 
-    private function getResponse(EntryCreatedNotification $notification): string
+    private function getResponse(Notification $notification): string
     {
+        $class = explode("\\", $this->entityManager->getClassMetadata(get_class($notification))->name);
+
         return json_encode(
             [
-                'entryId'      => $notification->entry->getId(),
-                'notification' => $this->twig->render('_layout/_toast.html.twig', ['notification' => $notification]),
+                'op'       => end($class),
+                'id'       => $notification->entry->getId(),
+                'magazine' => [
+                    'name' => $notification->entry->magazine->name,
+                ],
+                'toast'    => $this->twig->render('_layout/_toast.html.twig', ['notification' => $notification]),
             ]
         );
     }
 
-    public function sendDeleted(Entry $entry): void
+    public function sendDeleted(ContentInterface $subject): void
     {
-        $notification = new EntryDeletedNotification($entry->getUser(), $entry);
+        /**
+         * @var Entry $subject
+         */
+        $this->notifyMagazine($notification = new EntryDeletedNotification($subject->user, $subject));
+    }
 
-        $this->entityManager->persist($notification);
-        $this->entityManager->flush();
+    public function purgeNotifications(Entry $entry)
+    {
+        $notificationsIds = $this->notificationRepository->findEntryNotificationsIds($entry);
+
+        foreach ($notificationsIds as $id) {
+            $this->entityManager->remove($this->notificationRepository->find($id));
+        }
     }
 }

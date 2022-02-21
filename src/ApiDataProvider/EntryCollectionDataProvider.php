@@ -1,4 +1,4 @@
-<?php declare(strict_types=1);
+<?php declare(strict_types = 1);
 
 namespace App\ApiDataProvider;
 
@@ -7,7 +7,9 @@ use ApiPlatform\Core\DataProvider\RestrictedDataProviderInterface;
 use App\DTO\EntryDto;
 use App\Factory\EntryFactory;
 use App\PageView\EntryPageView;
+use App\Repository\Criteria;
 use App\Repository\EntryRepository;
+use App\Repository\MagazineRepository;
 use Exception;
 use Symfony\Component\HttpFoundation\RequestStack;
 
@@ -16,6 +18,7 @@ final class EntryCollectionDataProvider implements ContextAwareCollectionDataPro
     public function __construct(
         private EntryRepository $repository,
         private EntryFactory $factory,
+        private MagazineRepository $magazineRepository,
         private RequestStack $request
     ) {
     }
@@ -28,8 +31,15 @@ final class EntryCollectionDataProvider implements ContextAwareCollectionDataPro
     public function getCollection(string $resourceClass, string $operationName = null, array $context = []): iterable
     {
         try {
-            $criteria = new EntryPageView((int) $this->request->getCurrentRequest()->get('page', 1));
-            $entries  = $this->repository->findByCriteria($criteria);
+            $criteria             = new EntryPageView((int) $this->request->getCurrentRequest()->get('p', 1));
+            $criteria->sortOption = $this->request->getCurrentRequest()->get('sort', Criteria::SORT_HOT);
+            $criteria->time       = $criteria->resolveTime($this->request->getCurrentRequest()->get('time', Criteria::TIME_ALL));
+
+            if ($name = $this->request->getCurrentRequest()->get('magazine')) {
+                $criteria->magazine = $this->magazineRepository->findOneByName($name);
+            }
+
+            $entries = $this->repository->findByCriteria($criteria);
         } catch (Exception $e) {
             return [];
         }

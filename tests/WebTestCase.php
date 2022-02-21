@@ -45,12 +45,14 @@ abstract class WebTestCase extends BaseWebTestCase
         /**
          * @var $manager EntryCommentManager
          */
-        $manager = self::$container->get(EntryCommentManager::class);
+        $manager = static::getContainer()->get(EntryCommentManager::class);
 
         if ($parent) {
             $dto = (new EntryCommentDto())->createWithParent($entry ?? $this->getEntryByTitle('Przykladowa treść'), $parent, null, $body);
         } else {
-            $dto = (new EntryCommentDto())->create($entry ?? $this->getEntryByTitle('Przykladowa treść'), $body);
+            $dto        = new EntryCommentDto();
+            $dto->entry = $entry ?? $this->getEntryByTitle('Przykladowa treść');
+            $dto->body  = $body;
         }
 
         return $manager->create($dto, $user ?? $this->getUserByUsername('regularUser'));
@@ -89,15 +91,21 @@ abstract class WebTestCase extends BaseWebTestCase
         return $magazine ?: $this->createMagazine($name, null, $user);
     }
 
-    private function createEntry(string $title, Magazine $magazine, User $user, ?string $url = null, ?string $body = 'testowa treść'): Entry
+    protected function createEntry(string $title, Magazine $magazine, User $user, ?string $url = null, ?string $body = 'testowa treść'): Entry
     {
         /**
          * @var $manager EntryManager
          */
-        $manager = self::$container->get(EntryManager::class);
+        $manager = static::getContainer()->get(EntryManager::class);
 
-        $dto   = (new EntryDto())->create($magazine, $user, $title, $url, $body);
-        $entry = $manager->create($dto, $user ?? $this->getUserByUsername('regularUser'));
+        $dto           = new EntryDto();
+        $dto->magazine = $magazine;
+        $dto->title    = $title;
+        $dto->user     = $user;
+        $dto->url      = $url;
+        $dto->body     = $body;
+
+        $entry = $manager->create($dto, $user);
 
         $this->entries->add($entry);
 
@@ -106,11 +114,11 @@ abstract class WebTestCase extends BaseWebTestCase
 
     public function createVote(int $choice, VoteInterface $subject, User $user): Vote
     {
-        $manager = self::$container->get(EntityManagerInterface::class);
+        $manager = static::getContainer()->get(EntityManagerInterface::class);
         /**
          * @var $voteManager VoteManager
          */
-        $voteManager = self::$container->get(VoteManager::class);
+        $voteManager = static::getContainer()->get(VoteManager::class);
 
         $vote = $voteManager->vote($choice, $subject, $user);
 
@@ -125,15 +133,11 @@ abstract class WebTestCase extends BaseWebTestCase
         /**
          * @var $manager PostManager
          */
-        $manager = self::$container->get(PostManager::class);
+        $manager = static::getContainer()->get(PostManager::class);
 
-
-        $dto = (new PostDto())->create(
-            $magazine ?: $this->getMagazineByName('polityka'),
-            $user ?: $this->getUserByUsername('regularUser'),
-            null,
-            $body
-        );
+        $dto           = new PostDto();
+        $dto->magazine = $magazine ?: $this->getMagazineByName('polityka');
+        $dto->body     = $body;
 
         return $manager->create($dto, $user ?? $this->getUserByUsername('regularUser'));
     }
@@ -143,9 +147,11 @@ abstract class WebTestCase extends BaseWebTestCase
         /**
          * @var $manager PostCommentManager
          */
-        $manager = self::$container->get(PostCommentManager::class);
+        $manager = static::getContainer()->get(PostCommentManager::class);
 
-        $dto = (new PostCommentDto())->create($post, $body);
+        $dto       = new PostCommentDto();
+        $dto->post = $post;
+        $dto->body = $body;
 
         return $manager->create($dto, $user ?? $this->getUserByUsername('regularUser'));
     }
@@ -183,13 +189,19 @@ abstract class WebTestCase extends BaseWebTestCase
 
     private function createUser(string $username, string $email = null, string $password = null, $active = true): User
     {
-        $manager = self::$container->get(EntityManagerInterface::class);
+        $manager = static::getContainer()->get(EntityManagerInterface::class);
 
         $user = new User($email ? $email : $username.'@example.com', $username, $password ? $password : 'secret');
 
-        $user->isVerified       = $active;
-        $user->notifyOnNewEntry = true;
-        $user->notifyOnNewPost  = true;
+        $user->isVerified                   = $active;
+        $user->notifyOnNewEntry             = true;
+        $user->notifyOnNewEntryReply        = true;
+        $user->notifyOnNewEntryCommentReply = true;
+        $user->notifyOnNewPost              = true;
+        $user->notifyOnNewPostReply         = true;
+        $user->notifyOnNewPostCommentReply  = true;
+        $user->showProfileFollowings        = true;
+        $user->showProfileSubscriptions     = true;
 
         $manager->persist($user);
         $manager->flush();
@@ -214,7 +226,7 @@ abstract class WebTestCase extends BaseWebTestCase
         ];
     }
 
-    protected function getUserByUsername(string $username): User
+    protected function getUserByUsername(string $username, bool $isAdmin = false): User
     {
         $user = $this->users->filter(
             static function (User $user) use ($username) {
@@ -222,7 +234,17 @@ abstract class WebTestCase extends BaseWebTestCase
             }
         )->first();
 
-        return $user ?: $this->createUser($username);
+        $user = $user ?: $this->createUser($username);
+
+        if ($isAdmin) {
+            $user->roles = ['ROLE_ADMIN'];
+            $manager     = static::getContainer()->get(EntityManagerInterface::class);
+
+            $manager->persist($user);
+            $manager->flush();
+        }
+
+        return $user;
     }
 
     private function createMagazine(string $name, string $title = null, User $user = null): Magazine
@@ -230,9 +252,12 @@ abstract class WebTestCase extends BaseWebTestCase
         /**
          * @var $manager MagazineManager
          */
-        $manager = self::$container->get(MagazineManager::class);
+        $manager = static::getContainer()->get(MagazineManager::class);
 
-        $dto      = (new MagazineDto())->create($name, $title ?? 'Przykładowy magazyn', new ArrayCollection());
+        $dto        = new MagazineDto();
+        $dto->name  = $name;
+        $dto->title = $title ?? 'Przykładowy magazyn';
+
         $magazine = $manager->create($dto, $user ?? $this->getUserByUsername('regularUser'));
 
         $this->magazines->add($magazine);
@@ -249,15 +274,15 @@ abstract class WebTestCase extends BaseWebTestCase
 
         $entry   = $this->getEntryByTitle('test', null, 'test', $magazine, $actor);
         $comment = $this->createEntryComment('test', $entry, $actor);
-        (self::$container->get(EntryManager::class))->delete($owner, $entry);
-        (self::$container->get(EntryCommentManager::class))->delete($owner, $comment);
+        (static::getContainer()->get(EntryCommentManager::class))->delete($owner, $comment);
+        (static::getContainer()->get(EntryManager::class))->delete($owner, $entry);
 
         $post    = $this->createPost('test', $magazine, $actor);
         $comment = $this->createPostComment('test', $post, $actor);
-        (self::$container->get(PostManager::class))->delete($owner, $post);
-        (self::$container->get(PostCommentManager::class))->delete($owner, $comment);
+        (static::getContainer()->get(PostCommentManager::class))->delete($owner, $comment);
+        (static::getContainer()->get(PostManager::class))->delete($owner, $post);
 
-        (self::$container->get(MagazineManager::class))->ban(
+        (static::getContainer()->get(MagazineManager::class))->ban(
             $magazine,
             $actor,
             $owner,

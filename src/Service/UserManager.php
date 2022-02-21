@@ -2,37 +2,42 @@
 
 namespace App\Service;
 
-use App\DTO\RegisterUserDto;
+use App\DTO\CardanoWalletAddressDto;
 use App\DTO\UserDto;
 use App\Entity\User;
 use App\Event\User\UserBlockEvent;
 use App\Event\User\UserFollowedEvent;
 use App\Factory\UserFactory;
+use App\Message\DeleteUserMessage;
 use App\Message\UserCreatedMessage;
 use App\Message\UserUpdatedMessage;
 use App\Security\EmailVerifier;
 use Doctrine\ORM\EntityManagerInterface;
+use Exception;
 use Psr\EventDispatcher\EventDispatcherInterface;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 
 class UserManager
 {
     public function __construct(
         private UserFactory $factory,
-        private UserPasswordEncoderInterface $encoder,
+        private UserPasswordHasherInterface $passwordHasher,
+        private TokenStorageInterface $tokenStorage,
+        private RequestStack $requestStack,
         private EventDispatcherInterface $dispatcher,
         private MessageBusInterface $bus,
         private EmailVerifier $verifier,
-        private EntityManagerInterface $entityManager
+        private EntityManagerInterface $entityManager,
+        private RateLimiterFactory $userRegisterLimiter,
     ) {
     }
 
-    /**
-     * @IsGranted("ROLE_USER")
-     */
     public function follow(User $follower, User $following)
     {
         $follower->unblock($following);
@@ -44,9 +49,6 @@ class UserManager
         $this->dispatcher->dispatch(new UserFollowedEvent($follower, $following));
     }
 
-    /**
-     * @IsGranted("ROLE_USER")
-     */
     public function block(User $blocker, User $blocked)
     {
         $this->unfollow($blocker, $blocked);
@@ -58,9 +60,6 @@ class UserManager
         $this->dispatcher->dispatch(new UserBlockEvent($blocker, $blocked));
     }
 
-    /**
-     * @IsGranted("ROLE_USER")
-     */
     public function unfollow(User $follower, User $following)
     {
         $follower->unfollow($following);
@@ -70,29 +69,34 @@ class UserManager
         $this->dispatcher->dispatch(new UserFollowedEvent($follower, $following));
     }
 
-    /**
-     * @IsGranted("ROLE_USER")
-     */
     public function unblock(User $blocker, User $blocked)
     {
         $blocker->unblock($blocked);
 
         $this->entityManager->flush();
 
-        $this->dispatcher->dispatch(new UserFollowedEvent($blocker, $blocked));
+        $this->dispatcher->dispatch(new UserBlockEvent($blocker, $blocked));
     }
 
-    public function create(RegisterUserDto $dto, bool $verifyUserEmail = true): User
+    public function create(UserDto $dto, bool $verifyUserEmail = true): User
     {
+        $limiter = $this->userRegisterLimiter->create($dto->ip);
+        if (false === $limiter->consume()->isAccepted()) {
+            throw new TooManyRequestsHttpException();
+        }
+
         $user = new User($dto->email, $dto->username, '');
 
-        $user->setPassword($this->encoder->encodePassword($user, $dto->plainPassword));
+        $user->setPassword($this->passwordHasher->hashPassword($user, $dto->plainPassword));
 
         $this->entityManager->persist($user);
         $this->entityManager->flush();
 
         if ($verifyUserEmail) {
-            $this->bus->dispatch(new UserCreatedMessage($user->getId()));
+            try {
+                $this->bus->dispatch(new UserCreatedMessage($user->getId()));
+            } catch (Exception $e) {
+            }
         }
 
         return $user;
@@ -100,26 +104,41 @@ class UserManager
 
     public function edit(User $user, UserDto $dto): User
     {
-        if ($dto->avatar) {
-            $user->setAvatar($dto->avatar);
-        }
+        $this->entityManager->beginTransaction();
+        $mailUpdated = false;
 
-        if ($dto->plainPassword) {
-            $user->setPassword($this->encoder->encodePassword($user, $dto->plainPassword));
-        }
+        try {
+            if ($dto->avatar) {
+                $user->avatar = $dto->avatar;
+            }
 
-        if ($dto->email !== $user->email) {
-            $user->isVerified = false;
-            $user->email      = $dto->email;
+            if ($dto->plainPassword) {
+                $user->setPassword($this->passwordHasher->hashPassword($user, $dto->plainPassword));
+            }
+
+            if ($dto->email !== $user->email) {
+                $mailUpdated      = true;
+                $user->isVerified = false;
+                $user->email      = $dto->email;
+            }
 
             $this->entityManager->flush();
+            $this->entityManager->commit();
+        } catch (Exception $e) {
+            $this->entityManager->rollback();
+            throw $e;
+        }
 
+        if ($mailUpdated) {
             $this->bus->dispatch(new UserUpdatedMessage($user->getId()));
         }
 
-        $this->entityManager->flush();
-
         return $user;
+    }
+
+    public function delete(User $user, bool $purge = false): void
+    {
+        $this->bus->dispatch(new DeleteUserMessage($user->getId(), $purge));
     }
 
     public function createDto(User $user): UserDto
@@ -136,6 +155,36 @@ class UserManager
     {
         $user->toggleTheme();
 
+        $this->entityManager->flush();
+    }
+
+    public function logout(): void
+    {
+        $this->tokenStorage->setToken(null);
+        $this->requestStack->getSession()->invalidate();
+    }
+
+    public function attachWallet(User $user, CardanoWalletAddressDto $dto)
+    {
+        $user->cardanoWalletAddress = $dto->walletAddress;
+
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
+    }
+
+    public function ban(User $user)
+    {
+        $user->isBanned = true;
+
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
+    }
+
+    public function unban(User $user)
+    {
+        $user->isBanned = false;
+
+        $this->entityManager->persist($user);
         $this->entityManager->flush();
     }
 }

@@ -1,4 +1,4 @@
-import {Controller} from 'stimulus';
+import {Controller} from '@hotwired/stimulus';
 import {fetch, ok} from "../utils/http";
 import router from "../utils/routing";
 
@@ -6,6 +6,8 @@ export default class extends Controller {
     static targets = ['embed', 'container', 'close'];
     static classes = ['hidden', 'loading', 'embed'];
     static values = {
+        type: String,
+        image: String,
         isVisible: Boolean,
         loading: Boolean,
         url: String,
@@ -25,10 +27,20 @@ export default class extends Controller {
             return;
         }
 
+        if (this.typeValue === 'image' && this.hasImageValue) {
+            this.htmlValue = `<img src='${window.location.origin}/media/${this.imageValue}'>`;
+            this.show();
+            return;
+        }
+
         this.loadingValue = true;
 
         try {
-            let url = router().generate('ajax_fetch_embed', {url: this.urlValue});
+            if (this.typeValue === 'image') {
+                return;
+            }
+
+            const url = router().generate('ajax_fetch_embed', {url: this.urlValue});
 
             let response = await fetch(url, {method: 'GET'});
 
@@ -38,6 +50,7 @@ export default class extends Controller {
             this.htmlValue = response.html;
             this.show();
         } catch (e) {
+            alert('Oops, something went wrong.');
             throw e;
         } finally {
             this.loadingValue = false;
@@ -48,15 +61,28 @@ export default class extends Controller {
         this.containerTarget.innerHTML = '';
         this.containerTarget.classList.add(this.hiddenClass);
         this.closeTarget.classList.add(this.hiddenClass);
+        this.embedTarget.classList.add('d-inline');
         this.isVisibleValue = false;
+
+        if (this.element.classList.contains('kbin-embed-content')) {
+            this.element.getElementsByClassName('kbin-clearfix')[0].remove();
+        }
     }
 
     show() {
         this.containerTarget.innerHTML = this.htmlValue
         this.containerTarget.classList.remove(this.hiddenClass);
         this.closeTarget.classList.remove(this.hiddenClass);
-
+        this.embedTarget.classList.remove('d-inline');
         this.isVisibleValue = true;
+
+        if (this.element.classList.contains('kbin-embed-content')) {
+            const span = document.createElement('span')
+            span.classList.add('clearfix', 'kbin-clearfix');
+
+            const link = this.element.getElementsByTagName('a')[0];
+            link.parentNode.insertBefore(span, link.nextSibling);
+        }
     }
 
     loadingValueChanged() {

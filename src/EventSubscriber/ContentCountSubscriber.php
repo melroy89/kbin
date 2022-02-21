@@ -1,4 +1,4 @@
-<?php declare(strict_types=1);
+<?php declare(strict_types = 1);
 
 namespace App\EventSubscriber;
 
@@ -63,7 +63,7 @@ class ContentCountSubscriber implements EventSubscriberInterface
 
     public function onEntryCommentPurged(EntryCommentPurgedEvent $event): void
     {
-        $event->magazine->entryCommentCount = $this->entryRepository->countEntryCommentsByMagazine($event->getMagazine());
+        $event->magazine->entryCommentCount = $this->entryRepository->countEntryCommentsByMagazine($event->magazine);
 
         $this->entityManager->flush();
     }
@@ -88,7 +88,7 @@ class ContentCountSubscriber implements EventSubscriberInterface
 
     public function onPostCommentPurged(PostCommentPurgedEvent $event): void
     {
-        $event->comment->postCommentCount = $this->postRepository->countPostCommentsByMagazine($event->getMagazine());
+        $event->magazine->postCommentCount = $this->postRepository->countPostCommentsByMagazine($event->magazine);
 
         $this->entityManager->flush();
     }

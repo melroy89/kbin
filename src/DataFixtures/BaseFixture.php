@@ -1,4 +1,4 @@
-<?php declare(strict_types=1);
+<?php declare(strict_types = 1);
 
 namespace App\DataFixtures;
 
@@ -14,6 +14,7 @@ abstract class BaseFixture extends Fixture implements FixtureGroupInterface
 {
     protected Generator $faker;
     protected ObjectManager $manager;
+    protected Slugger $slugger;
 
     public static function getGroups(): array
     {
@@ -23,7 +24,7 @@ abstract class BaseFixture extends Fixture implements FixtureGroupInterface
     public function load(ObjectManager $manager): void
     {
         $this->manager = $manager;
-        $this->faker   = Factory::create('pl_PL');
+        $this->faker   = Factory::create();
 
         $this->loadData($manager);
     }
@@ -32,7 +33,7 @@ abstract class BaseFixture extends Fixture implements FixtureGroupInterface
 
     protected function camelCase($value): string
     {
-        return (new Slugger())->camelCase($value);
+        return Slugger::camelCase($value);
     }
 
     protected function getRandomTime(?DateTimeImmutable $from = null): DateTimeImmutable

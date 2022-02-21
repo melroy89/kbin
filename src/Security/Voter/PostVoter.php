@@ -1,4 +1,4 @@
-<?php declare(strict_types=1);
+<?php declare(strict_types = 1);
 
 namespace App\Security\Voter;
 
@@ -49,10 +49,6 @@ class PostVoter extends Voter
     private function canEdit(Post $post, User $user): bool
     {
         if ($post->user === $user) {
-            return true;
-        }
-
-        if ($post->magazine->userIsModerator($user)) {
             return true;
         }
 

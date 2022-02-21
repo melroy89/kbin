@@ -1,4 +1,4 @@
-<?php declare(strict_types=1);
+<?php declare(strict_types = 1);
 
 namespace App\Twig;
 
@@ -11,8 +11,8 @@ final class MagazineExtension extends AbstractExtension
     public function getFunctions(): array
     {
         return [
-            new TwigFunction('is_subscribed', [MagazineRuntime::class, 'isSubscribed']),
-            new TwigFunction('is_magazine_blocked', [MagazineRuntime::class, 'isMagazineBlocked']),
+            new TwigFunction('is_magazine_subscribed', [MagazineRuntime::class, 'isSubscribed']),
+            new TwigFunction('is_magazine_blocked', [MagazineRuntime::class, 'isBlocked']),
         ];
     }
 }

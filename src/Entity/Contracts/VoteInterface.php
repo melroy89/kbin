@@ -12,6 +12,8 @@ interface VoteInterface
     const VOTE_NONE = 0;
     const VOTE_DOWN = -1;
 
+    public function getId(): int;
+
     public function addVote(Vote $votable): self;
 
     public function removeVote(Vote $votable): self;

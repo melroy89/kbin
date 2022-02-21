@@ -1,4 +1,4 @@
-<?php declare(strict_types=1);
+<?php declare(strict_types = 1);
 
 namespace App\DTO;
 
@@ -13,7 +13,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  */
 class ModeratorDto
 {
-    public Magazine $magazine;
+    public ?Magazine $magazine = null;
     #[Assert\NotBlank]
     public ?User $user = null;
 

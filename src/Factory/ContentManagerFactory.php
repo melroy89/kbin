@@ -1,4 +1,4 @@
-<?php declare(strict_types=1);
+<?php declare(strict_types = 1);
 
 namespace App\Factory;
 
@@ -6,7 +6,7 @@ use App\Entity\Contracts\ContentInterface;
 use App\Entity\Entry;
 use App\Entity\EntryComment;
 use App\Entity\Post;
-use App\Service\Contracts\ContentManager;
+use App\Service\Contracts\ContentManagerInterface;
 use App\Service\EntryCommentManager;
 use App\Service\EntryManager;
 use App\Service\PostCommentManager;
@@ -25,7 +25,7 @@ class ContentManagerFactory
     ) {
     }
 
-    public function createManager(ContentInterface $subject): ContentManager
+    public function createManager(ContentInterface $subject): ContentManagerInterface
     {
         return match ($this->entityManager->getClassMetadata(get_class($subject))->name) {
             Entry::class => $this->entryManager,

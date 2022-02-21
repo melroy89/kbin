@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace App\Markdown\CommonMark;
 
@@ -17,7 +17,7 @@ final class MagazineLinkParser extends AbstractLocalLinkParser
 
     public function getRegex(): string
     {
-        return '/^(?:\w{2,25}\+){0,70}\w{2,25}\b/';
+        return '/^\w{2,25}\b/';
     }
 
     public function getUrl(string $suffix): string

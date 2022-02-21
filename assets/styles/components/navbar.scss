@@ -3,13 +3,39 @@
   padding-right: 0;
 
   .kbin-nav {
-    padding-top: 1.7rem;
     padding-bottom: 0;
     background-color: $kbin-navbar-background-color;
     border-bottom: 1px solid $kbin-navbar-border-color;
 
     @include media-breakpoint-up(lg) {
       position: relative;
+
+      .offcanvas {
+        flex-direction: row;
+
+        .kbin-dark & {
+          background-color: $kbin-navbar-background-color !important;
+        }
+      }
+    }
+
+    @include media-breakpoint-down(lg) {
+      .offcanvas {
+        margin-left: 0 !important;
+        background: $kbin-background;
+        padding: $spacer * .5;
+
+        .navbar-nav {
+          width: 100%;
+          text-align: center;
+        }
+
+        .kbin-dark & {
+          .btn-close {
+            filter: none;
+          }
+        }
+      }
     }
 
     &-brand, span a {
@@ -35,7 +61,8 @@
           color: $kbin-navbar-link-color !important;
           border: 1px solid transparent;
           display: block;
-          padding: .5rem 1rem;
+          font-size: 0.74rem;
+          padding: 0.55rem 1rem;
           transition: color .15s ease-in-out, background-color .15s ease-in-out, border-color .15s ease-in-out;
 
           @include media-breakpoint-down(lg) {

@@ -1,4 +1,4 @@
-<?php declare(strict_types=1);
+<?php declare(strict_types = 1);
 
 namespace App\Twig\Runtime;
 
@@ -22,7 +22,7 @@ class MagazineRuntime implements RuntimeExtensionInterface
         return $magazine->isSubscribed($this->security->getUser());
     }
 
-    public function isMagazineBlocked(Magazine $magazine): bool
+    public function isBlocked(Magazine $magazine): bool
     {
         if (!$this->security->getUser()) {
             return false;
