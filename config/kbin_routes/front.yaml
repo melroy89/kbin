@@ -19,6 +19,13 @@ front_moderated:
   methods: [GET]
   requirements: { sortBy: "%front_sort_options%" }
 
+front_federated:
+  controller: App\Controller\FederationController
+  defaults: { sortBy: ~, time: ~ }
+  path: /fed/{sortBy}/{time}
+  methods: [GET]
+  requirements: { sortBy: "%front_sort_options%" }
+
 front_magazine:
   controller: App\Controller\FrontController::magazine
   defaults: { sortBy: ~, time: ~ }

@@ -276,6 +276,11 @@ class PageContextRuntime implements RuntimeExtensionInterface
         return str_contains($this->getCurrentRouteName(), 'moderated');
     }
 
+    public function isFedPage(): bool
+    {
+        return str_contains($this->getCurrentRouteName(), 'federated');
+    }
+
     public function getActiveCommentsPagePath(): string
     {
         $routeName   = 'entry_comments_front';
