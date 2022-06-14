@@ -25,16 +25,18 @@ class TagRepository
     {
         // @todo union adapter
         $conn = $this->entityManager->getConnection();
+
         $sql  = "
-        (SELECT id, created_at, 'entry' AS type FROM entry WHERE tags LIKE '%{$tag}%') 
+        (SELECT id, created_at, 'entry' AS type FROM entry WHERE tags ?? '{$tag}') 
         UNION 
-        (SELECT id, created_at, 'entry_comment' AS type FROM entry_comment WHERE tags LIKE '%{$tag}%')
+        (SELECT id, created_at, 'entry_comment' AS type FROM entry_comment WHERE tags ?? '{$tag}')
         UNION 
-        (SELECT id, created_at, 'post' AS type FROM post WHERE tags LIKE '%{$tag}%')
+        (SELECT id, created_at, 'post' AS type FROM post WHERE tags ?? '{$tag}')
         UNION 
-        (SELECT id, created_at, 'post_comment' AS type FROM post_comment WHERE tags LIKE '%{$tag}%')
+        (SELECT id, created_at, 'post_comment' AS type FROM post_comment WHERE tags ?? '{$tag}')
         ORDER BY created_at DESC
         ";
+
         $stmt = $conn->prepare($sql);
         $stmt = $stmt->executeQuery();
 
@@ -57,12 +59,15 @@ class TagRepository
 
         $entries = $this->entityManager->getRepository(Entry::class)->findBy(['id' => $this->getOverviewIds((array) $result, 'entry')]);
         $this->entityManager->getRepository(Entry::class)->hydrate(...$entries);
+
         $entryComments = $this->entityManager->getRepository(EntryComment::class)->findBy(
             ['id' => $this->getOverviewIds((array) $result, 'entry_comment')]
         );
         $this->entityManager->getRepository(EntryComment::class)->hydrate(...$entryComments);
+
         $post = $this->entityManager->getRepository(Post::class)->findBy(['id' => $this->getOverviewIds((array) $result, 'post')]);
         $this->entityManager->getRepository(Post::class)->hydrate(...$post);
+
         $postComment = $this->entityManager->getRepository(PostComment::class)->findBy(
             ['id' => $this->getOverviewIds((array) $result, 'post_comment')]
         );
