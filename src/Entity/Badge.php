@@ -1,34 +1,33 @@
-<?php declare(strict_types = 1);
+<?php declare(strict_types=1);
 
 namespace App\Entity;
 
 use Doctrine\Common\Collections\Collection;
-use Doctrine\ORM\Mapping as ORM;
+use Doctrine\ORM\Mapping\Column;
+use Doctrine\ORM\Mapping\Entity;
+use Doctrine\ORM\Mapping\GeneratedValue;
+use Doctrine\ORM\Mapping\Id;
+use Doctrine\ORM\Mapping\JoinColumn;
+use Doctrine\ORM\Mapping\ManyToOne;
+use Doctrine\ORM\Mapping\OneToMany;
 
-/**
- * @ORM\Entity()
- */
+#[Entity]
 class Badge
 {
-    /**
-     * @ORM\ManyToOne(targetEntity=Magazine::class, inversedBy="badges")
-     * @ORM\JoinColumn(onDelete="cascade")
-     */
-    public Magazine $magazine;
-    /**
-     * @ORM\OneToMany(targetEntity="EntryBadge", mappedBy="badge", cascade={"remove"}, orphanRemoval=true)
-     */
-    public Collection $badges;
-    /**
-     * @ORM\Column(type="string")
-     */
-    public ?string $name;
-    /**
-     * @ORM\Id
-     * @ORM\GeneratedValue
-     * @ORM\Column(type="integer")
-     */
+    #[Id]
+    #[GeneratedValue]
+    #[Column(type: 'integer')]
     private int $id;
+
+    #[ManyToOne(targetEntity: Magazine::class, inversedBy: 'badges')]
+    #[JoinColumn(nullable: false, onDelete: 'cascade')]
+    public Magazine $magazine;
+
+    #[Column(type: 'string', nullable: false)]
+    public ?string $name;
+
+    #[OneToMany(mappedBy: 'badge', targetEntity: EntryBadge::class, cascade: ['remove'], orphanRemoval: true)]
+    public Collection $badges;
 
     public function __construct(Magazine $magazine, string $name)
     {

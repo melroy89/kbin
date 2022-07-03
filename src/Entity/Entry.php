@@ -67,8 +67,8 @@ class Entry implements VoteInterface, CommentInterface, DomainInterface, Visibil
     #[JoinColumn(nullable: true)]
     public ?Domain $domain = null;
 
-    #[Column(type: 'string', length: 255, nullable: false)]
-    public string $slug;
+    #[Column(type: 'string', length: 255, nullable: true)]
+    public ?string $slug = null;
 
     #[Column(type: 'string', length: 255, nullable: false)]
     public string $title;
@@ -101,16 +101,16 @@ class Entry implements VoteInterface, CommentInterface, DomainInterface, Visibil
     public int $score = 0;
 
     #[Column(type: 'integer', nullable: false)]
-    public int $views = 0;
+    public ?int $views = 0;
 
     #[Column(type: 'boolean', nullable: false)]
-    public bool $isAdult = false;
+    public ?bool $isAdult = false;
 
     #[Column(type: 'boolean', nullable: false)]
     public bool $sticky = false;
 
-    #[Column(type: 'datetimetz', nullable: true)]
-    public ?DateTime $lastActive = null;
+    #[Column(type: 'datetimetz', nullable: false)]
+    public ?DateTime $lastActive=null;
 
     #[Column(type: 'string', nullable: true)]
     public ?string $ip = null;

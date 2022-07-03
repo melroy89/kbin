@@ -3,17 +3,16 @@
 namespace App\Entity;
 
 use App\Entity\Contracts\ContentInterface;
-use Doctrine\ORM\Mapping as ORM;
+use Doctrine\ORM\Mapping\Entity;
+use Doctrine\ORM\Mapping\JoinColumn;
+use Doctrine\ORM\Mapping\ManyToOne;
 
-/**
- * @ORM\Entity()
- */
+#[Entity]
 class EntryCardanoTx extends CardanoTx
 {
-    /**
-     * @ORM\ManyToOne(targetEntity="Entry", inversedBy="cardanoTx")
-     */
-    public ?Entry $entry;
+    #[ManyToOne(targetEntity: Entry::class, inversedBy: 'cardanoTx')]
+    #[JoinColumn(nullable: true)]
+    public ContentInterface|Entry|null $entry;
 
     public function __construct(
         ContentInterface $entry,
