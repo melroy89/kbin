@@ -26,7 +26,6 @@ use Doctrine\ORM\Mapping\Id;
 use Doctrine\ORM\Mapping\JoinColumn;
 use Doctrine\ORM\Mapping\ManyToOne;
 use Doctrine\ORM\Mapping\OneToMany;
-use Tchoulom\ViewCounterBundle\Entity\ViewCounter;
 use Tchoulom\ViewCounterBundle\Model\ViewCountable;
 use Webmozart\Assert\Assert;
 

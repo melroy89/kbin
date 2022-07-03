@@ -3,16 +3,15 @@
 namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
+use Doctrine\ORM\Mapping\Entity;
+use Doctrine\ORM\Mapping\JoinColumn;
+use Doctrine\ORM\Mapping\ManyToOne;
 
-/**
- * @ORM\Entity()
- */
+#[Entity]
 class EntryCommentFavourite extends Favourite
 {
-    /**
-     * @ORM\ManyToOne(targetEntity="EntryComment", inversedBy="favourites")
-     * @ORM\JoinColumn(nullable=true, onDelete="SET NULL")
-     */
+    #[ManyToOne(targetEntity: EntryComment::class, inversedBy: 'favourites')]
+    #[JoinColumn(nullable: true, onDelete: 'SET NULL')]
     public ?EntryComment $entryComment;
 
     public function __construct(User $user, EntryComment $comment)

@@ -4,16 +4,15 @@ namespace App\Entity;
 
 use App\Entity\Contracts\ContentInterface;
 use Doctrine\ORM\Mapping as ORM;
+use Doctrine\ORM\Mapping\Entity;
+use Doctrine\ORM\Mapping\JoinColumn;
+use Doctrine\ORM\Mapping\ManyToOne;
 
-/**
- * @ORM\Entity()
- */
+#[Entity]
 class MagazineLogEntryRestored extends MagazineLog
 {
-    /**
-     * @ORM\ManyToOne(targetEntity="Entry")
-     * @ORM\JoinColumn(nullable=true, onDelete="SET NULL")
-     */
+    #[ManyToOne(targetEntity: Entry::class)]
+    #[JoinColumn(nullable: true, onDelete: 'SET NULL')]
     public ?Entry $entry;
 
     public function __construct(Entry $entry, User $user)

@@ -2,27 +2,27 @@
 
 namespace App\Entity;
 
-use Doctrine\ORM\Mapping as ORM;
+use Doctrine\ORM\Mapping\AssociationOverride;
+use Doctrine\ORM\Mapping\AssociationOverrides;
+use Doctrine\ORM\Mapping\Cache;
+use Doctrine\ORM\Mapping\Entity;
+use Doctrine\ORM\Mapping\JoinColumn;
+use Doctrine\ORM\Mapping\ManyToOne;
+use Doctrine\ORM\Mapping\Table;
+use Doctrine\ORM\Mapping\UniqueConstraint;
 
-/**
- * @ORM\Table(uniqueConstraints={
- *     @ORM\UniqueConstraint(
- *         name="user_post_vote_idx",
- *         columns={"user_id", "post_id"}
- *     )
- * })
- * @ORM\Entity()
- * @ORM\AssociationOverrides({
- *     @ORM\AssociationOverride(name="user", inversedBy="postVotes")
- * })
- * @ORM\Cache("NONSTRICT_READ_WRITE")
- */
+#[Entity]
+#[Table(uniqueConstraints: [
+    new UniqueConstraint(name: 'user_post_vote_idx', columns: ['user_id', 'post_id'])
+])]
+#[AssociationOverrides([
+    new AssociationOverride(name: 'user', inversedBy: 'postVotes')
+])]
+#[Cache('NONSTRICT_READ_WRITE')]
 class PostVote extends Vote
 {
-    /**
-     * @ORM\JoinColumn(name="post_id", nullable=false, onDelete="cascade")
-     * @ORM\ManyToOne(targetEntity="Post", inversedBy="votes")
-     */
+    #[ManyToOne(targetEntity: Post::class, inversedBy: 'votes')]
+    #[JoinColumn(name: 'post_id', nullable: true, onDelete: 'cascade')]
     public ?Post $post;
 
     public function __construct(int $choice, User $user, ?Post $post)

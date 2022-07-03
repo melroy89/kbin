@@ -3,15 +3,15 @@
 namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
+use Doctrine\ORM\Mapping\Entity;
+use Doctrine\ORM\Mapping\JoinColumn;
+use Doctrine\ORM\Mapping\ManyToOne;
 
-/**
- * @ORM\Entity()
- */
+#[Entity]
 class MessageNotification extends Notification
 {
-    /**
-     * @ORM\ManyToOne(targetEntity="Message", inversedBy="notifications")
-     */
+    #[ManyToOne(targetEntity: Message::class, inversedBy: 'notifications')]
+    #[JoinColumn(nullable: true)]
     public ?Message $message;
 
     public function __construct(

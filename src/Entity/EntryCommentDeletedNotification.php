@@ -3,15 +3,15 @@
 namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
+use Doctrine\ORM\Mapping\Entity;
+use Doctrine\ORM\Mapping\JoinColumn;
+use Doctrine\ORM\Mapping\ManyToOne;
 
-/**
- * @ORM\Entity()
- */
+#[Entity]
 class EntryCommentDeletedNotification extends Notification
 {
-    /**
-     * @ORM\ManyToOne(targetEntity="EntryComment", inversedBy="notifications")
-     */
+    #[ManyToOne(targetEntity: EntryComment::class, inversedBy: 'notifications')]
+    #[JoinColumn(nullable: true)]
     public ?EntryComment $entryComment;
 
     public function __construct(User $receiver, EntryComment $comment)

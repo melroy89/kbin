@@ -30,8 +30,8 @@ class Image
     #[Column(type: 'string', nullable: false)]
     public string $fileName;
 
-    #[Column(type: 'string', length: 32, nullable: false)]
-    public string $sha256;
+    #[Column(type: 'binary', length: 32, nullable: false)]
+    public $sha256;
 
     #[Column(type: 'string', nullable: true)]
     public ?int $width = null;

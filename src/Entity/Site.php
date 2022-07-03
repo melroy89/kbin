@@ -2,47 +2,39 @@
 
 namespace App\Entity;
 
-use Doctrine\ORM\Mapping as ORM;
+use Doctrine\ORM\Mapping\Column;
+use Doctrine\ORM\Mapping\Entity;
+use Doctrine\ORM\Mapping\GeneratedValue;
+use Doctrine\ORM\Mapping\Id;
 
-/**
- * @ORM\Entity()
- */
+#[Entity]
 class Site
 {
-    /**
-     * @ORM\Column(type="string")
-     */
+    #[Id]
+    #[GeneratedValue]
+    #[Column(type: 'integer')]
+    private int $id;
+
+    #[Column(type: 'string', nullable: true)]
     public string $domain;
-    /**
-     * @ORM\Column(type="string")
-     */
+
+    #[Column(type: 'string', nullable: true)]
     public string $title;
-    /**
-     * @ORM\Column(type="text", nullable=true, options={"default" : null})
-     */
+
+    #[Column(type: 'string', nullable: true)]
     public ?string $description;
-    /**
-     * @ORM\Column(type="text", nullable=true, options={"default" : null})
-     */
+
+    #[Column(type: 'string', nullable: true)]
     public ?string $terms = null;
-    /**
-     * @ORM\Column(type="text", nullable=true, options={"default" : null})
-     */
+
+    #[Column(type: 'string', nullable: true)]
     public ?string $privacyPolicy = null;
-    /**
-     * @ORM\Column(type="boolean")
-     */
+
+    #[Column(type: 'boolean', nullable: true)]
     public bool $enabled;
-    /**
-     * @ORM\Column(type="boolean")
-     */
+
+    #[Column(type: 'boolean', nullable: true)]
     public bool $registrationOpen;
-    /**
-     * @ORM\Id
-     * @ORM\GeneratedValue
-     * @ORM\Column(type="integer")
-     */
-    private $id;
 
     public function getId(): ?int
     {

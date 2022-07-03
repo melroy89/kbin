@@ -2,8 +2,8 @@
 
 namespace App\Entity;
 
-use Doctrine\ORM\Mapping as ORM;
 use Doctrine\ORM\Mapping\AssociationOverride;
+use Doctrine\ORM\Mapping\AssociationOverrides;
 use Doctrine\ORM\Mapping\Cache;
 use Doctrine\ORM\Mapping\Entity;
 use Doctrine\ORM\Mapping\JoinColumn;
@@ -15,14 +15,14 @@ use Doctrine\ORM\Mapping\UniqueConstraint;
 #[Table(uniqueConstraints: [
     new UniqueConstraint(name: 'user_entry_vote_idx', columns: ['user_id', 'entry_id'])
 ])]
-#[ORM\AssociationOverrides([
+#[AssociationOverrides([
     new AssociationOverride(name: 'user', inversedBy: 'entryVotes')
 ])]
 #[Cache('NONSTRICT_READ_WRITE')]
 class EntryVote extends Vote
 {
     #[ManyToOne(targetEntity: Entry::class, inversedBy: 'votes')]
-    #[JoinColumn(name: 'entry_id', nullable: false, onDelete: 'cascade')]
+    #[JoinColumn(name: 'entry_id', nullable: true, onDelete: 'cascade')]
     public ?Entry $entry;
 
     public function __construct(int $choice, User $user, ?Entry $entry)
