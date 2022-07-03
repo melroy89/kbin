@@ -2,21 +2,20 @@
 
 namespace App\Entity;
 
-use Doctrine\ORM\Mapping as ORM;
+use Doctrine\ORM\Mapping\Entity;
+use Doctrine\ORM\Mapping\JoinColumn;
+use Doctrine\ORM\Mapping\ManyToOne;
+use Doctrine\ORM\Mapping\Table;
 use Tchoulom\ViewCounterBundle\Entity\ViewCounter as BaseViewCounter;
 use Tchoulom\ViewCounterBundle\Entity\ViewCounterInterface;
 use Tchoulom\ViewCounterBundle\Model\ViewCountable;
 
-/**
- * @ORM\Table(name="view_counter")
- * @ORM\Entity()
- */
+#[Entity]
+#[Table(name: 'view_counter')]
 class ViewCounter extends BaseViewCounter
 {
-    /**
-     * @ORM\ManyToOne(targetEntity="App\Entity\Entry", cascade={"persist"}, inversedBy="viewCounters")
-     * @ORM\JoinColumn(nullable=true)
-     */
+    #[ManyToOne(targetEntity: Entry::class, cascade: ['persist'], inversedBy: 'viewCounters')]
+    #[JoinColumn(nullable: true)]
     public ViewCountable $entry;
 
     public function getPage():  ?ViewCountable

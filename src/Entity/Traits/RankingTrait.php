@@ -6,9 +6,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 trait RankingTrait
 {
-    /**
-     * @ORM\Column(type="integer")
-     */
+    #[ORM\Column(type: 'integer')]
     public int $ranking = 0;
 
     public function updateRanking(): void

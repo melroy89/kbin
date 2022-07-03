@@ -8,41 +8,38 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\Collections\Criteria;
 use Doctrine\ORM\Mapping as ORM;
+use Doctrine\ORM\Mapping\Column;
+use Doctrine\ORM\Mapping\Entity;
+use Doctrine\ORM\Mapping\GeneratedValue;
+use Doctrine\ORM\Mapping\Id;
+use Doctrine\ORM\Mapping\OneToMany;
+use Doctrine\ORM\Mapping\Table;
 
-/**
- * @ORM\Table(uniqueConstraints={
- *     @ORM\UniqueConstraint(name="domain_name_idx", columns={"name"}),
- * })
- * @ORM\Entity(repositoryClass=DomainRepository::class)
- */
+#[Entity(repositoryClass: DomainRepository::class)]
+#[Table(uniqueConstraints: [
+    new ORM\UniqueConstraint(name: 'domain_name_idx', columns: ['name'])
+])]
 class Domain
 {
-    /**
-     * @ORM\OneToMany(targetEntity=Entry::class, mappedBy="domain")
-     */
-    public Collection $entries;
-    /**
-     * @ORM\Column(type="string", length=255)
-     */
-    public string $name;
-    /**
-     * @ORM\Column(type="integer")
-     */
-    public int $entryCount = 0;
-    /**
-     * @ORM\Column(type="integer", options={"default" : 0})
-     */
-    public int $subscriptionsCount = 0;
-    /**
-     * @ORM\OneToMany(targetEntity=DomainSubscription::class, mappedBy="domain", orphanRemoval=true, cascade={"persist", "remove"})
-     */
-    public Collection $subscriptions;
-    /**
-     * @ORM\Id
-     * @ORM\GeneratedValue
-     * @ORM\Column(type="integer")
-     */
+    #[Id]
+    #[GeneratedValue]
+    #[Column(type: 'integer')]
     private int $id;
+
+    #[OneToMany(mappedBy: 'domain', targetEntity: Entry::class)]
+    public Collection $entries;
+
+    #[Column(type: 'string', length: 255, nullable: false)]
+    public string $name;
+
+    #[Column(type: 'integer', nullable: false)]
+    public int $entryCount = 0;
+
+    #[Column(type: 'integer', nullable: false)]
+    public int $subscriptionsCount = 0;
+
+    #[OneToMany(mappedBy: 'domain', targetEntity: DomainSubscription::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    public Collection $subscriptions;
 
     public function __construct(DomainInterface $entry, string $name)
     {

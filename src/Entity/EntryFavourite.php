@@ -2,16 +2,13 @@
 
 namespace App\Entity;
 
-use Doctrine\ORM\Mapping as ORM;
+use Doctrine\ORM\Mapping\Entity;
+use Doctrine\ORM\Mapping\ManyToOne;
 
-/**
- * @ORM\Entity()
- */
+#[Entity]
 class EntryFavourite extends Favourite
 {
-    /**
-     * @ORM\ManyToOne(targetEntity="Entry", inversedBy="favourites")
-     */
+    #[ManyToOne(targetEntity: Entry::class, inversedBy: 'favourites')]
     public ?Entry $entry;
 
     public function __construct(User $user, Entry $entry)

@@ -1,46 +1,43 @@
-<?php declare(strict_types = 1);
+<?php declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Repository\ImageRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Doctrine\ORM\Mapping\Column;
+use Doctrine\ORM\Mapping\Entity;
+use Doctrine\ORM\Mapping\GeneratedValue;
+use Doctrine\ORM\Mapping\Id;
+use Doctrine\ORM\Mapping\Table;
 use InvalidArgumentException;
 use function strlen;
 
-/**
- * @ORM\Entity(repositoryClass="App\Repository\ImageRepository")
- * @ORM\Table(uniqueConstraints={
- *     @ORM\UniqueConstraint(name="images_file_name_idx", columns={"file_name"}),
- *     @ORM\UniqueConstraint(name="images_sha256_idx", columns={"sha256"}),
- * })
- */
+#[Entity(repositoryClass: ImageRepository::class)]
+#[Table(uniqueConstraints: [
+    new ORM\UniqueConstraint(name: 'images_file_name_idx', columns: ['file_name']),
+    new ORM\UniqueConstraint(name: 'images_sha256_idx', columns: ['sha256']),
+])]
 class Image
 {
-    /**
-     * @ORM\Column(type="string")
-     */
-    public string $filePath;
-    /**
-     * @ORM\Column(type="string")
-     */
-    public string $fileName;
-    /**
-     * @ORM\Column(type="binary", length=32)
-     */
-    public $sha256;
-    /**
-     * @ORM\Column(type="integer", nullable=true)
-     */
-    public ?int $width;
-    /**
-     * @ORM\Column(type="integer", nullable=true)
-     */
-    public ?int $height;
-    /**
-     * @ORM\Id
-     * @ORM\GeneratedValue
-     * @ORM\Column(type="integer")
-     */
+    #[Id]
+    #[GeneratedValue]
+    #[Column(type: 'integer')]
     private int $id;
+
+    #[Column(type: 'string', nullable: false)]
+    public string $filePath;
+
+    #[Column(type: 'string', nullable: false)]
+    public string $fileName;
+
+    #[Column(type: 'string', length: 32, nullable: false)]
+    public string $sha256;
+
+    #[Column(type: 'string', nullable: true)]
+    public ?int $width = null;
+
+    #[Column(type: 'string', nullable: true)]
+    public ?int $height = null;
 
     public function __construct(string $fileName, string $filePath, string $sha256, ?int $width, ?int $height)
     {

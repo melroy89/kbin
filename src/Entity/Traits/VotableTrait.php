@@ -11,14 +11,10 @@ use Doctrine\ORM\Mapping as ORM;
 
 trait VotableTrait
 {
-    /**
-     * @ORM\Column(type="integer")
-     */
+    #[ORM\Column(type: 'integer')]
     private int $upVotes = 0;
 
-    /**
-     * @ORM\Column(type="integer")
-     */
+    #[ORM\Column(type: 'integer')]
     private int $downVotes = 0;
 
     public function countUpVotes(): int

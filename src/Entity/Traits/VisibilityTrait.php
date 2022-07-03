@@ -8,9 +8,7 @@ use JetBrains\PhpStorm\Pure;
 
 trait VisibilityTrait
 {
-    /**
-     * @ORM\Column(type="text", options={"default": "visible"})
-     */
+    #[ORM\Column(type: 'text', nullable: true, options: ['default' => VisibilityInterface::VISIBILITY_VISIBLE])]
     public string $visibility = VisibilityInterface::VISIBILITY_VISIBLE;
 
     #[Pure] public function isVisible(): bool

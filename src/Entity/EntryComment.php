@@ -16,13 +16,18 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\Collections\Criteria;
 use Doctrine\ORM\Mapping as ORM;
+use Doctrine\ORM\Mapping\Column;
+use Doctrine\ORM\Mapping\Entity;
+use Doctrine\ORM\Mapping\GeneratedValue;
+use Doctrine\ORM\Mapping\Id;
+use Doctrine\ORM\Mapping\JoinColumn;
+use Doctrine\ORM\Mapping\ManyToOne;
+use Doctrine\ORM\Mapping\OneToMany;
 use Doctrine\ORM\Mapping\OrderBy;
 use Traversable;
 use Webmozart\Assert\Assert;
 
-/**
- * @ORM\Entity(repositoryClass=EntryCommentRepository::class)
- */
+#[Entity(repositoryClass: EntryCommentRepository::class)]
 class EntryComment implements VoteInterface, VisibilityInterface, ReportInterface, FavouriteInterface
 {
     use VotableTrait;
@@ -32,83 +37,65 @@ class EntryComment implements VoteInterface, VisibilityInterface, ReportInterfac
     }
     use EditedAtTrait;
 
-    /**
-     * @ORM\ManyToOne(targetEntity=User::class, inversedBy="entryComments")
-     * @ORM\JoinColumn(nullable=false)
-     */
-    public User $user;
-    /**
-     * @ORM\ManyToOne(targetEntity=Entry::class, inversedBy="comments")
-     * @ORM\JoinColumn(nullable=false, onDelete="cascade")
-     */
-    public ?Entry $entry;
-    /**
-     * @ORM\ManyToOne(targetEntity=Magazine::class)
-     * @ORM\JoinColumn(nullable=false, onDelete="cascade")
-     */
-    public ?Magazine $magazine;
-    /**
-     * @ORM\ManyToOne(targetEntity="Image", cascade={"persist"})
-     * @ORM\JoinColumn(nullable=true)
-     */
-    public ?Image $image = null;
-    /**
-     * @ORM\ManyToOne(targetEntity="EntryComment", inversedBy="children")
-     * @ORM\JoinColumn(onDelete="cascade")
-     */
-    public ?EntryComment $parent;
-    /**
-     * @ORM\ManyToOne(targetEntity="EntryComment")
-     */
-    public ?EntryComment $root = null;
-    /**
-     * @ORM\Column(type="text", length=4500)
-     */
-    public ?string $body;
-    /**
-     * @ORM\Column(type="integer", options={"default": 0})
-     */
-    public int $favouriteCount = 0;
-    /**
-     * @ORM\Column(type="datetimetz")
-     */
-    public DateTime $lastActive;
-    /**
-     * @ORM\Column(type="string", nullable=true)
-     */
-    public ?string $ip = null;
-    /**
-     * @ORM\Column(type="array", nullable=true, options={"default" : null})
-     */
-    public ?array $tags = null;
-    /**
-     * @ORM\OneToMany(targetEntity="EntryComment", mappedBy="parent", orphanRemoval=true)
-     * @OrderBy({"id" = "ASC"})
-     */
-    public Collection $children;
-    /**
-     * @ORM\OneToMany(targetEntity=EntryCommentVote::class, mappedBy="comment",
-     *     fetch="EXTRA_LAZY", cascade={"persist"}, orphanRemoval=true))
-     */
-    public Collection $votes;
-    /**
-     * @ORM\OneToMany(targetEntity="App\Entity\EntryCommentReport", mappedBy="entryComment", cascade={"remove"}, orphanRemoval=true, fetch="EXTRA_LAZY")
-     */
-    public Collection $reports;
-    /**
-     * @ORM\OneToMany(targetEntity="App\Entity\EntryCommentFavourite", mappedBy="entryComment", cascade={"remove"}, orphanRemoval=true, fetch="EXTRA_LAZY")
-     */
-    public Collection $favourites;
-    /**
-     * @ORM\OneToMany(targetEntity="EntryCommentCreatedNotification", mappedBy="entryComment", cascade={"remove"}, orphanRemoval=true, fetch="EXTRA_LAZY")
-     */
-    public Collection $notifications;
-    /**
-     * @ORM\Id
-     * @ORM\GeneratedValue
-     * @ORM\Column(type="integer")
-     */
+    #[Id]
+    #[GeneratedValue]
+    #[Column(type: 'integer')]
     private int $id;
+
+    #[ManyToOne(targetEntity: User::class, inversedBy: 'entryComments')]
+    #[JoinColumn(nullable: false)]
+    public User $user;
+
+    #[ManyToOne(targetEntity: Entry::class, inversedBy: 'comments')]
+    #[JoinColumn(nullable: false)]
+    public ?Entry $entry;
+
+    #[ManyToOne(targetEntity: Magazine::class)]
+    #[JoinColumn(nullable: false, onDelete: 'cascade')]
+    public ?Magazine $magazine;
+
+    #[ManyToOne(targetEntity: Image::class, cascade: ['persist'])]
+    #[JoinColumn(nullable: true)]
+    public ?Image $image = null;
+
+    #[ManyToOne(targetEntity: EntryComment::class, inversedBy: 'children')]
+    #[JoinColumn(nullable: true, onDelete: 'cascade')]
+    public ?EntryComment $parent = null;
+
+    #[ManyToOne(targetEntity: EntryComment::class)]
+    #[JoinColumn(nullable: true)]
+    public ?EntryComment $root = null;
+
+    #[Column(type: 'text', length: 4500, nullable: true)]
+    public ?string $body = null;
+
+    #[Column(type: 'integer', nullable: false)]
+    public int $favouriteCount = 0;
+
+    #[Column(type: 'datetimetz', nullable: false)]
+    public ?DateTime $lastActive = null;
+
+    #[Column(type: 'string', nullable: true)]
+    public ?string $ip = null;
+
+    #[Column(type: 'array', nullable: true)]
+    public ?array $tags = null;
+
+    #[OneToMany(mappedBy: 'parent', targetEntity: EntryComment::class, orphanRemoval: true)]
+    #[OrderBy(['createdAt' => 'ASC'])]
+    public Collection $children;
+
+    #[OneToMany(mappedBy: 'comment', targetEntity: EntryCommentVote::class, cascade: ['persist'], fetch: 'EXTRA_LAZY', orphanRemoval: true)]
+    public Collection $votes;
+
+    #[OneToMany(mappedBy: 'entryComment', targetEntity: EntryCommentReport::class, cascade: ['remove'], fetch: 'EXTRA_LAZY', orphanRemoval: true)]
+    public Collection $reports;
+
+    #[OneToMany(mappedBy: 'entryComment', targetEntity: EntryCommentFavourite::class, cascade: ['remove'], fetch: 'EXTRA_LAZY', orphanRemoval: true)]
+    public Collection $favourites;
+
+    #[OneToMany(mappedBy: 'entryComment', targetEntity: EntryCommentCreatedNotification::class, cascade: ['remove'], fetch: 'EXTRA_LAZY', orphanRemoval: true)]
+    public Collection $notifications;
 
     public function __construct(string $body, ?Entry $entry, User $user, ?EntryComment $parent = null, ?string $ip = null)
     {
