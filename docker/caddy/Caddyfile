@@ -1,12 +1,6 @@
 {
     # Debug
     {$DEBUG}
-    # HTTP/3 support
-    servers {
-        protocol {
-            experimental_http3
-        }
-    }
 }
 
 {$SERVER_NAME}
@@ -34,5 +28,4 @@ route {
     php_fastcgi unix//var/run/php/php-fpm.sock
     encode zstd gzip
     file_server
-    header /media/* Cache-Control max-age=5184000
 }
