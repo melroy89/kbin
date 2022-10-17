@@ -1,7 +1,3 @@
-{% set hasImage = false %}
-{% if comment is defined and comment is not null and comment.image %}
-    {% set hasImage = true %}
-{% endif %}
 {% if focus is not defined %}
     {% set focus = true %}
 {% endif %}
@@ -24,20 +20,20 @@
             </a>
 
 
-            <button type="button" class="btn btn-secondary me-1 {{ hasImage ? 'd-none' : '' }}" data-bs-toggle="modal"
-                    data-bs-target="#media-modal-{{ comment is not defined or comment is null ? entry.id : comment.id }}"
+            <button type="button" class="btn btn-secondary me-1 {{ comment.image ? 'd-none' : '' }}" data-bs-toggle="modal"
+                    data-bs-target="#media-modal-entry-{{ entry.id }}"
                     data-media-target="modalButton">
                 <i class="fas fa-camera"></i>
             </button>
 
 
             <button data-action="media#delete"
-                    data-media-url-param="{{ hasImage ? path('entry_comment_image_delete', {magazine_name: comment.magazine.name, entry_id: comment.entry.id, comment_id: comment.id}) : '' }}"
+                    data-media-url-param="{{ comment.image ? path('entry_comment_image_delete', {magazine_name: comment.magazine.name, entry_id: comment.entry.id, comment_id: comment.id}) : '' }}"
                     data-media-target="deleteButton" type="button"
-                    class="btn-close me-1 {{ hasImage ? '' : 'd-none' }}"
+                    class="btn-close me-1 {{ comment.image ? '' : 'd-none' }}"
                     aria-label="Close"></button>
 
-            {% if hasImage %}
+            {% if comment.image %}
                 <img data-media-target="thumb" src="{{ asset(comment.image.filePath) | imagine_filter('post_thumb') }}"
                      alt="" class="me-2"/>
             {% endif %}
@@ -49,7 +45,7 @@
     </div>
 </div>
 
-<div id="media-modal-{{ comment is not defined or comment is null ? entry.id : comment.id }}" class="modal"
+<div id="media-modal-entry-{{ entry.id }}" class="modal"
      tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
