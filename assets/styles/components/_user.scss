@@ -51,6 +51,10 @@
 }
 
 .user-box {
+  &.full {
+    margin-left: 1.5rem;
+  }
+
   figure {
     margin: 0;
     padding: 0;
@@ -67,7 +71,6 @@
 
   .user-main {
     display: flex;
-    margin-left: 1.5rem;
     padding-top: 2rem;
     text-align: center;
 
@@ -114,6 +117,10 @@
   display: grid;
   gap: 1rem;
   grid-template-columns: repeat(2, 1fr);
+
+    @include media-breakpoint-down(sm) {
+        grid-template-columns: repeat(1, 1fr);
+    }
 
   .magazine {
     align-content: center;

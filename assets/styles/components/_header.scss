@@ -135,7 +135,7 @@
     }
 
     menu {
-      grid-auto-flow: row !important;
+      display: block !important;
     }
 
     &__menu {
@@ -201,11 +201,5 @@
       padding-left: 0 !important;
       font-weight: bold !important;
     }
-  }
-}
-
-@include media-breakpoint-down(ss) {
-  .head-nav {
-
   }
 }
